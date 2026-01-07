@@ -17,7 +17,7 @@ jobs:
 
       - name: Install tools
         run: |
-          # Fail fast on errors, unset vars, or pipe issues.
+          # Fail fast on errors and undefined variables.
           set -euo pipefail
           # Update package lists and install required utilities.
           sudo apt-get update -y
@@ -27,7 +27,7 @@ jobs:
 
       - name: Download files by ID into _inbox
         run: |
-          # Fail fast on errors, unset vars, or pipe issues.
+          # Fail fast on errors and undefined variables.
           set -euo pipefail
           # Create inbox and download each file ID via gdown.
           mkdir -p _inbox && cd _inbox
@@ -63,7 +63,7 @@ jobs:
 
       - name: Create clean target folders
         run: |
-          # Fail fast on errors, unset vars, or pipe issues.
+          # Fail fast on errors and undefined variables.
           set -euo pipefail
           # Reset target folders before sorting imports.
           rm -rf kernel twrp magisk wildksu
@@ -71,7 +71,7 @@ jobs:
 
       - name: Sort downloads and record map
         run: |
-          # Fail fast on errors, unset vars, or pipe issues.
+          # Fail fast on errors and undefined variables.
           set -euo pipefail
           # Move downloads into destination folders and track mappings.
           : > IMPORT_MAP.txt
@@ -91,7 +91,7 @@ jobs:
 
       - name: Extract archives (skip magisk)
         run: |
-          # Fail fast on errors, unset vars, or pipe issues.
+          # Fail fast on errors and undefined variables.
           set -euo pipefail
           # Extract archives in-place for non-magisk folders.
           extract() {
@@ -109,7 +109,7 @@ jobs:
 
       - name: Fail if any file >95 MB
         run: |
-          # Fail fast on errors, unset vars, or pipe issues.
+          # Fail fast on errors and undefined variables.
           set -euo pipefail
           # Ensure no files exceed GitHub's 100 MB limit buffer.
           if find . -type f -not -path "./.git/*" -size +95M | grep -q .; then
@@ -118,7 +118,7 @@ jobs:
 
       - name: Commit & push
         run: |
-          # Fail fast on errors, unset vars, or pipe issues.
+          # Fail fast on errors and undefined variables.
           set -euo pipefail
           # Commit and push only when repository changes exist.
           if [ -n "$(git status --porcelain)" ]; then
