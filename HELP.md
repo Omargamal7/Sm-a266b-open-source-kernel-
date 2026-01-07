@@ -68,8 +68,8 @@ Similar to the first workflow but uses full Google Drive URLs instead of just fi
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/sm-a266b-kernel.git
-   cd sm-a266b-kernel
+   git clone https://github.com/Omargamal7/Sm-a266b-open-source-kernel-.git
+   cd Sm-a266b-open-source-kernel-
    ```
 
 2. **Import kernel files:**
