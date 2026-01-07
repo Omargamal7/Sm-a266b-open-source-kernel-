@@ -106,7 +106,7 @@ jobs:
 
           rm -rf _inbox
 
-      - name: Extract archives (skip magisk) + delete archives
+      - name: Extract archives (including magisk) + delete archives
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -173,7 +173,7 @@ jobs:
             esac
           }
 
-          for dir in kernel/opensource kernel/platform twrp wildksu; do
+          for dir in kernel/opensource kernel/platform twrp wildksu magisk; do
             for f in "$dir"/*; do
               [ -f "$f" ] || continue
               extract_one "$f" "$dir"
