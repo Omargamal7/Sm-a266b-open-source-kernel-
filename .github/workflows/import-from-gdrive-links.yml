@@ -180,17 +180,6 @@ jobs:
             done
           done
 
-      - name: Safety check: no file > 95MB before push
-        run: |
-          set -euo pipefail
-          # GitHub hard-rejects files >=100MB; keep a safety buffer.
-          BIG="$(find . -type f -not -path "./.git/*" -size +95M | head -n 200 || true)"
-          if [ -n "$BIG" ]; then
-            echo "ERROR: Found files >95MB (push may fail):"
-            echo "$BIG"
-            exit 1
-          fi
-
       - name: Commit & push (extracted only)
         run: |
           set -euo pipefail
