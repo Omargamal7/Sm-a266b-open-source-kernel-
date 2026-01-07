@@ -75,7 +75,7 @@ jobs:
           rm -rf kernel twrp magisk wildksu
           mkdir -p kernel/opensource kernel/platform twrp magisk wildksu
 
-      - name: Sort downloads into 4 roots (with map report)
+      - name: Sort downloads into roots (with map report)
         run: |
           set -euo pipefail
 
@@ -111,6 +111,34 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
+          ensure_safe_entries() {
+            local f="$1"
+            local kind="$2"
+            local entries=""
+
+            case "$kind" in
+              zip)
+                entries="$(unzip -Z1 "$f")"
+                ;;
+              7z)
+                entries="$(7z l -slt "$f" | awk -F' = ' '/^Path = /{print $2}')"
+                ;;
+              tar)
+                entries="$(tar -tf "$f")"
+                ;;
+            esac
+
+            while IFS= read -r p; do
+              [ -z "$p" ] && continue
+              if [[ "$p" == /* || "$p" == *"../"* || "$p" == *"\\..\\"* ]]; then
+                echo "Unsafe path in archive $f: $p"
+                return 1
+              fi
+            done <<< "$entries"
+
+            return 0
+          }
+
           extract_one() {
             local f="$1"
             local dir="$2"
@@ -119,14 +147,17 @@ jobs:
 
             case "$lc" in
               *.zip)
+                ensure_safe_entries "$f" zip
                 unzip -o "$f" -d "$dir" >/dev/null
                 rm -f "$f"
                 ;;
               *.7z)
+                ensure_safe_entries "$f" 7z
                 7z x -y -o"$dir" "$f" >/dev/null
                 rm -f "$f"
                 ;;
               *.tar|*.tar.gz|*.tgz|*.tar.xz|*.tar.zst)
+                ensure_safe_entries "$f" tar
                 tar -xf "$f" -C "$dir"
                 rm -f "$f"
                 ;;
@@ -134,6 +165,7 @@ jobs:
                 # Fallback: try ZIP detection if extension is weird
                 mt="$(file -b --mime-type "$f" || true)"
                 if [ "$mt" = "application/zip" ]; then
+                  ensure_safe_entries "$f" zip
                   unzip -o "$f" -d "$dir" >/dev/null
                   rm -f "$f"
                 fi
@@ -151,6 +183,7 @@ jobs:
       - name: Safety check: no file > 95MB before push
         run: |
           set -euo pipefail
+          # GitHub hard-rejects files >=100MB; keep a safety buffer.
           BIG="$(find . -type f -not -path "./.git/*" -size +95M | head -n 200 || true)"
           if [ -n "$BIG" ]; then
             echo "ERROR: Found files >95MB (push may fail):"
