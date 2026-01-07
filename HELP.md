@@ -68,7 +68,7 @@ Similar to the first workflow but uses full Google Drive URLs instead of just fi
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/Omargamal7/Sm-a266b-open-source-kernel-.git
+   git clone <repository-url>
    cd Sm-a266b-open-source-kernel-
    ```
 
@@ -177,7 +177,3 @@ For issues specific to the SM-A266B kernel or this repository:
 ## License
 
 Kernel source code is typically licensed under GPL v2. Check individual files for specific licensing information.
-
----
-
-**Last Updated:** January 2026

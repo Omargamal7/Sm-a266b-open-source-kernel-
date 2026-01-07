@@ -22,7 +22,7 @@ This repository provides automated workflows for importing, organizing, and mana
 ## Repository Structure
 
 - `kernel/opensource/` - Open source kernel components
-- `kernel/platform/` - Platform-specific kernel files  
+- `kernel/platform/` - Platform-specific kernel files
 - `twrp/` - TWRP/Recovery files
 - `magisk/` - Magisk modules
 - `wildksu/` - WildKSU/KernelSU files
