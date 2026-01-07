@@ -179,8 +179,6 @@ jobs:
               extract_one "$f" "$dir"
             done
           done
-          
-          fi
 
       - name: Commit & push (extracted only)
         run: |
