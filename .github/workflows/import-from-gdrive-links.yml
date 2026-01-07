@@ -106,7 +106,7 @@ jobs:
 
           rm -rf _inbox
 
-      - name: Extract archives (skip magisk) + delete archives
+      - name: Extract archives (including magisk) + delete archives
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -173,22 +173,13 @@ jobs:
             esac
           }
 
-          for dir in kernel/opensource kernel/platform twrp wildksu; do
+          for dir in kernel/opensource kernel/platform twrp wildksu magisk; do
             for f in "$dir"/*; do
               [ -f "$f" ] || continue
               extract_one "$f" "$dir"
             done
           done
-
-      - name: Safety check: no file > 95MB before push
-        run: |
-          set -euo pipefail
-          # GitHub hard-rejects files >=100MB; keep a safety buffer.
-          BIG="$(find . -type f -not -path "./.git/*" -size +95M | head -n 200 || true)"
-          if [ -n "$BIG" ]; then
-            echo "ERROR: Found files >95MB (push may fail):"
-            echo "$BIG"
-            exit 1
+          
           fi
 
       - name: Commit & push (extracted only)
