@@ -1,0 +1,174 @@
+name: Import Drive files (links) -> sort -> extract -> commit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: drive-import-links
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y unzip p7zip-full rsync zstd ca-certificates file
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade gdown
+
+      - name: Download all files to _inbox (only these links)
+        run: |
+          set -euo pipefail
+
+          mkdir -p _inbox
+          cd _inbox
+
+          URLS=(
+            "https://docs.google.com/uc?export=download&id=1Ct8x1k6qSEuFpsfG6_L0ma_PENAhUMGw"
+            "https://docs.google.com/uc?export=download&id=1Cm0Ik6DCXUxyKBBkDJjWL_tKDIx2FaBL"
+            "https://docs.google.com/uc?export=download&id=1ddANiZ1HuK02fgyRDWjw43zFmjgkVkwE"
+            "https://docs.google.com/uc?export=download&id=1WCQp_FtMA_mXQMC6E8H2dEsAamZoW5tS"
+            "https://docs.google.com/uc?export=download&id=1vHgoVnhv-rZ9DFtEWFjXTTDIH-PnB7OP"
+            "https://docs.google.com/uc?export=download&id=1YvjfvJZ_Fad6YbmXaILtg2-BQtVDWo4q"
+            "https://docs.google.com/uc?export=download&id=1zEzWx8NgkifsqjwGUJXr1VzigMJj4apc"
+            "https://docs.google.com/uc?export=download&id=1iasfEq6Smybt5kUedkRlxUe6JYHS5rih"
+            "https://docs.google.com/uc?export=download&id=1xqWwe48Rq5SMyEHlXl1JP-LXvy6oqdps"
+            "https://docs.google.com/uc?export=download&id=1aHpV1Ci--MDG5HnjhEO3DJH7ddC2noAI"
+            "https://docs.google.com/uc?export=download&id=1opiD3V9r1MhM7R7eeKFLufJM9eeJK1E-"
+            "https://docs.google.com/uc?export=download&id=1MDuAOg6vsFLHd3uPF9D7xsKd8LhJK1sg"
+            "https://docs.google.com/uc?export=download&id=1bDEaCQ2D9DXTW3L_80B4_oYwPl4cA-Gf"
+            "https://docs.google.com/uc?export=download&id=14B1_Wzovks9xyOcst5h2h7QIzuWgeurr"
+            "https://docs.google.com/uc?export=download&id=1QQyoh8te2k8fqngRZE7KNctlF3P9KaUd"
+            "https://docs.google.com/uc?export=download&id=165IQgq2FCaN3ZcmTzpGI25ErUrmAag5J"
+            "https://docs.google.com/uc?export=download&id=1Nz0pEsxwqg6mAWTmGeKkszXsXpKV1jsB"
+            "https://docs.google.com/uc?export=download&id=1Txi0ddO_VFVpaEYTLV4rEY-fU4f1Axe7"
+            "https://docs.google.com/uc?export=download&id=1Ogikw-SwCivQJxtsSfrLmnQ5WyGmzS94"
+            "https://docs.google.com/uc?export=download&id=1JD2TTSSM73kA52F-TZxy5FVzHs-NOkNx"
+            "https://docs.google.com/uc?export=download&id=1Hg_tUYeLZlTGIBOm3wEKNDz_yJ0rXah-"
+            "https://docs.google.com/uc?export=download&id=19YYMm7J0VJnBbxGl8JzViAl1oDpmfZzz"
+            "https://docs.google.com/uc?export=download&id=1RhBkBp7xuZrNskXz-uC3Y_5UNf2x6IPp"
+          )
+
+          for u in "${URLS[@]}"; do
+            echo "Downloading: $u"
+            # gdown handles Drive confirmation tokens for big files better than curl/wget.
+            gdown --no-cookies --continue --remaining-ok "$u"
+          done
+
+          echo "Downloaded files:"
+          ls -lah
+
+      - name: Create target folders (overwrite)
+        run: |
+          set -euo pipefail
+          rm -rf kernel twrp magisk wildksu
+          mkdir -p kernel/opensource kernel/platform twrp magisk wildksu
+
+      - name: Sort downloads into 4 roots (with map report)
+        run: |
+          set -euo pipefail
+
+          MAP="IMPORT_MAP.txt"
+          : > "$MAP"
+
+          shopt -s nullglob
+          for f in _inbox/*; do
+            [ -f "$f" ] || continue
+            base="$(basename "$f")"
+            lc="$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')"
+
+            dest="kernel/opensource"
+
+            if [[ "$lc" == *twrp* || "$lc" == *recovery* ]]; then
+              dest="twrp"
+            elif [[ "$lc" == *magisk* ]]; then
+              dest="magisk"
+            elif [[ "$lc" == *wildksu* || "$lc" == *kernelsu* || "$lc" == *ksu* ]]; then
+              dest="wildksu"
+            elif [[ "$lc" == *platform* ]]; then
+              dest="kernel/platform"
+            fi
+
+            echo "$base -> $dest" | tee -a "$MAP"
+            mv -f "$f" "$dest/"
+          done
+
+          rm -rf _inbox
+
+      - name: Extract archives (skip magisk) + delete archives
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          extract_one() {
+            local f="$1"
+            local dir="$2"
+            local lc
+            lc="$(printf '%s' "$f" | tr '[:upper:]' '[:lower:]')"
+
+            case "$lc" in
+              *.zip)
+                unzip -o "$f" -d "$dir" >/dev/null
+                rm -f "$f"
+                ;;
+              *.7z)
+                7z x -y -o"$dir" "$f" >/dev/null
+                rm -f "$f"
+                ;;
+              *.tar|*.tar.gz|*.tgz|*.tar.xz|*.tar.zst)
+                tar -xf "$f" -C "$dir"
+                rm -f "$f"
+                ;;
+              *)
+                # Fallback: try ZIP detection if extension is weird
+                mt="$(file -b --mime-type "$f" || true)"
+                if [ "$mt" = "application/zip" ]; then
+                  unzip -o "$f" -d "$dir" >/dev/null
+                  rm -f "$f"
+                fi
+                ;;
+            esac
+          }
+
+          for dir in kernel/opensource kernel/platform twrp wildksu; do
+            for f in "$dir"/*; do
+              [ -f "$f" ] || continue
+              extract_one "$f" "$dir"
+            done
+          done
+
+      - name: Safety check: no file > 95MB before push
+        run: |
+          set -euo pipefail
+          BIG="$(find . -type f -not -path "./.git/*" -size +95M | head -n 200 || true)"
+          if [ -n "$BIG" ]; then
+            echo "ERROR: Found files >95MB (push may fail):"
+            echo "$BIG"
+            exit 1
+          fi
+
+      - name: Commit & push (extracted only)
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name  "cloud-import-bot"
+          git config user.email "cloud-import-bot@users.noreply.github.com"
+
+          git add -A
+          git commit -m "Import Drive files (sorted + extracted only)"
+          git push
