@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" name="viewport" name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+  <script type="module" crossorigin src="/assets/fade-4ApaDT9x.js"></script>
+  <script type="module" crossorigin src="/assets/creditsjs-BfjoyHvA.js"></script>
+  <script type="module" crossorigin src="/assets/i18n-BqJdyLAD.js"></script>
+  <script type="module" crossorigin src="/assets/index-CArO9y6x.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BkZPgubJ.css">
+</head>
+
+<style>
+	div,p{
+		z-index: 40;	
+	}
+</style>
+
+<body class="bg-black font-amongus2 font-bold">
+	<canvas id="backgroundCanvas" class="absolute inset-0 z-0 max-h-screen bg-black"></canvas>
+	<!-- Susfs not installed dialog -->
+	<dialog id="susfs_nos_dialog" class="modal">
+		<div class="modal-box flex flex-col items-center border-2 border-white bg-black">
+		  <img src="/assets/susfs_error-BRcgEdpI.png" class="w-auto h-28 mx-auto mb-2"/>
+		  <h3 class="text-lg font-bold text-center text-white font-amongus2" data-i18n="susfs_error_label">NUH UH! Unsupported Kernel!</h3>
+		  <p class="py-4 text-center font-normal text-white font-amongus2" data-i18n="susfs_error_desc">WebUI Access Denied! Make sure you're on a SuSFS patched kernel!</p>
+		  <div class="flex flex-row justify-center items-center gap-2">
+		  <button class="btn border-white bg-cyan-100/20 dark:bg-black/20 backdrop-blur-[2.5px] text-white" data-i18n="close_label" onclick="ksu.exec(`am start -a android.intent.action.VIEW -d https://gitlab.com/simonpunk/susfs4ksu`)">SUSFS Repo</button>
+		  <button class="btn border-white bg-cyan-100/20 dark:bg-black/20 backdrop-blur-[2.5px] text-white" data-i18n="close_label" onclick="ksu.exec(`am start -a android.intent.action.VIEW -d https://github.com/WildKernels`)">GKI Kernel With SUSFS</button>
+		  </div>
+		</div>
+	</dialog>
+	<!-- susfs update dialog -->
+	 <dialog id="susfs_update_dialog" class="modal">
+		<div class="modal-box flex flex-col items-center border-2 border-white bg-black">
+		  <img src="/assets/susfs_update-BC5m6nLp.png" class="w-auto h-24 mx-auto mb-2"/>
+		  <h3 class="text-lg font-bold text-center text-white font-amongus2 pb-4" data-i18n="susfs_update_label" id="susfs_update">SUSFS Userspace Update!</h3>
+		  <h3 class="text-lg font-bold text-center text-white font-amongus2 pb-4 hidden" data-i18n="susfs_updating_label" id="susfs_updating">Updating...</h3>
+		  <p class="text-center font-normal text-white font-amongus2" data-i18n="susfs_update_desc" id="susfs_update_desc1">There's an update to your SUSFS Userspace Binaries!</p>
+		  <p class="text-center font-normal text-white font-amongus2" data-i18n="susfs_update2_desc" id="susfs_update_desc2">Please update to the latest version to ensure compatibility with the Module and the WebUI.</p>
+		  <div class="loading loading-spinner loading-lg hidden" id="susfs_loading_icon"></div> 
+		  <div class="flex flex-row justify-center items-center pt-4 gap-2" id="susfs_update_buttons">
+		  <form method="dialog">
+			<button class="btn border-white bg-cyan-100/20 dark:bg-black/20 backdrop-blur-[2.5px] text-white" data-i18n="skip_btn_label">Skip</button>
+		  </form>
+		  <button class="btn border-white bg-cyan-100/20 dark:bg-black/20 backdrop-blur-[2.5px] text-white" data-i18n="update_btn_label" id="susfs_update_btn">Update</button>
+		  </div>
+		</div>
+	</dialog>
+	<!--Spoof uname dialog-->
+	<dialog id="confirm_modal" class="modal modal-bottom sm:modal-middle">
+		<div class="modal-box">
+			<h3 class="font-bold text-base font-sans" data-i18n="warning_label">Warning!</h3>
+			<p class="py-4 font-sans" id="modal_message" data-i18n="uname_warning_label2">Setting this on may cause a bootloop or instability if spoofed incorrectly. Are you sure you want to enable post-fs-data execution?</p>
+			<div class="modal-action">
+				<button class="btn btn-md btn-error font-sans" id="modal_cancel" data-i18n="cancel_label">Cancel</button>
+				<button class="btn btn-md btn-primary font-sans" id="modal_confirm" data-i18n="confirm_label">Confirm</button>
+			</div>
+		</div>
+	</dialog>
+	<!--Reset dialog-->
+	<dialog id="confirm_reset_modal" class="modal modal-bottom sm:modal-middle">
+		<div class="modal-box">
+			<h3 class="font-bold text-base font-sans" data-i18n="warning_label">Warning!</h3>
+			<p class="py-4 font-sans" data-i18n="reset_warning_label">This will reset all configurations to their default values. Are you sure you want to proceed?</p>
+			<div class="modal-action">
+				<button class="btn btn-md btn-error font-sans" id="reset_modal_cancel" data-i18n="cancel_label">Cancel</button>
+				<button class="btn btn-md btn-primary font-sans" id="reset_modal_confirm" data-i18n="confirm_label">Confirm</button>
+			</div>
+		</div>
+	</dialog>
+	<!--<div class="z-50 toast toast-top toast-center">
+		<div id="toast" class="alert alert-error bg-red-500 font-bold text-black font-sans opacity-100 duration-300">
+			<span>Spaces are not allowed in the input!</span>
+		  </div>
+	</div>-->
+	<main class="max-h-screen relative overflow-auto text-base" data-router-wrapper>
+		<div class="pb-14" data-router-view="home">
+			<div class="flex justify-between items-center mx-auto ml-4 pt-5 mr-4">
+				<div class="flex flex-col">
+					<h1 class="font-bold text-6xl text-white font-amongus">SUSFS A</h1>
+					<h3 class="text-2xl text-balance text-white" data-i18n="app_title">WebUI menu</h3>
+					<h4 id="susfs_version" class="text-base text-balance text-white font-amongus2"></h4>
+				</div>
+				<div>
+					<select class="select select-sm font-sans border-white bg-cyan-100/20 dark:bg-black/20 dark:text-white backdrop-blur-[2.5px] text-white" id="language">
+					</select>
+					<a href="credits.html" class="text-white"><button class="btn btn-md btn-outline text-base border-white bg-cyan-100/20 dark:bg-black/20 backdrop-blur-[2.5px] mt-2 text-white h-auto" data-i18n="about_label">about</button></a>
+				</div>
+			</div>
+			<section class="flex flex-col justify-start items-center min-h-fit ml-4 mr-4 uppercase">
+				<div class="w-full mt-5">
+					<div class="grid grid-cols-2 gap-3 sm:grid-cols-4 w-full">
+						<!-- SUS PATH Card -->
+						<div class="relative overflow-hidden border-2 border-white bg-gradient-to-br from-cyan-500/30 to-purple-500/20 backdrop-blur-[2.5px] rounded-lg p-4 hover:scale-105 transition-transform duration-200">
+							<div class="flex flex-col items-center justify-center gap-2">
+								<div class="text-white/70 text-lg font-amongus2 font-bold tracking-wider" data-i18n="sus_path_label">SUS PATH</div>
+								<div class="text-white text-lg font-bold font-amongus" id="sus_path">0</div>
+							</div>
+							<div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8"></div>
+						</div>
+
+						<!-- SUS MAPS Card -->
+						<div class="relative overflow-hidden border-2 border-white bg-gradient-to-br from-purple-500/30 to-pink-500/20 backdrop-blur-[2.5px] rounded-lg p-4 hover:scale-105 transition-transform duration-200">
+							<div class="flex flex-col items-center justify-center gap-2">
+								<div class="text-white/70 text-lg font-amongus2 font-bold tracking-wider" data-i18n="sus_map_label">SUS MAPS</div>
+								<div class="text-white text-lg font-bold font-amongus" id="sus_map">0</div>
+							</div>
+							<div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8"></div>
+						</div>
+
+						<!-- SUS MOUNT Card -->
+						<div class="relative overflow-hidden border-2 border-white bg-gradient-to-br from-pink-500/30 to-red-500/20 backdrop-blur-[2.5px] rounded-lg p-4 hover:scale-105 transition-transform duration-200">
+							<div class="flex flex-col items-center justify-center gap-2">
+								<div class="text-white/70 text-lg font-amongus2 font-bold tracking-wider" data-i18n="sus_mount_label">SUS MOUNT</div>
+								<div class="text-white text-lg font-bold font-amongus" id="sus_mount">0</div>
+							</div>
+							<div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8"></div>
+						</div>
+
+						<!-- TRY UMOUNT Card -->
+						<div class="relative overflow-hidden border-2 border-white bg-gradient-to-br from-red-500/30 to-orange-500/20 backdrop-blur-[2.5px] rounded-lg p-4 hover:scale-105 transition-transform duration-200">
+							<div class="flex flex-col items-center justify-center gap-2">
+								<div class="text-white/70 text-lg font-amongus2 font-bold tracking-wider" data-i18n="try_umount_label">TRY UMOUNT</div>
+								<div class="text-white text-lg font-bold font-amongus" id="try_umount">0</div>
+							</div>
+							<div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8"></div>
+						</div>
+					</div>
+				</div>
+				<div class="stats flex flex-col divide-x-0 divide-y-0 items-center justify-center white:bg-cyan-100/20 bg-cyan-100/20 dark:bg-black/20 mt-5 border-2 p-2 border-white backdrop-blur-[2.5px] min-w-full sm:min-w-[400px]">
+					<div class="stat p-0 mt-0">
+						<div class="form-control">
+							<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="susfs_log_label">SUSFS Logs</span>
+							<input type="checkbox" id="susfs_log" class="toggle toggle-md toggle-primary" checked="checked" />
+							</label>
+						</div>
+						<!--this one is for 1.5.2+ if the user force enables sus_su 1-->
+						<div id="sus_su_1" class="form-control hidden">
+							<label class="label cursor-pointer">
+								<span class="text-white text-base font-amongus2" data-i18n="sus_su_1_label">SUS SU is on Mode 1</span>
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 text-yellow-500 dark:text-yellow-500">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+								</svg>																		
+							</label>
+						</div>
+						<!--this one is for 1.4.2-->
+						<div id="sus_su_142" class="hidden">
+							<div class="form-control">
+							<label class="label cursor-pointer">
+								<span class="text-white text-lg" data-i18n="sus_su_label">SUS SU</span>
+								<input type="checkbox" id="sus_su" class="toggle toggle-md toggle-secondary" checked="checked" />
+							</label>
+							</div>
+							<div class="form-control">
+								<label class="label cursor-pointer">
+								<span class="text-white text-base" data-i18n="sus_su_boot_label">SUS SU on boot</span>
+								<input type="checkbox" id="enable_sus_su" class="toggle toggle-md toggle-accent" checked="checked" />
+								</label>
+							</div>
+						</div>
+					</div>
+					<a href="custom.html" class="text-white"><button class="btn btn-md btn-outline text-base border-white mt-2 text-white" data-i18n="susfs_settings_label">custom susfs settings</button></a>
+					<a href="status.html" class="text-white hidden" id="susfs_kernel_status"><button class="btn btn-md btn-outline text-base border-white mt-2 text-white" data-i18n="susfs_kernel_status_label">SUSFS Kernel Status</button></a>
+				</div>
+				<div id="sus_su_154" class="min-w-full sm:min-w-[400px]">
+				  <div class="stats flex flex-col divide-x-0 divide-y-0 white:bg-cyan-100/20 bg-cyan-100/20 dark:bg-black/20 mt-5 border-2 p-4 border-white backdrop-blur-[2.5px]">
+						<div class="text-white text-xl font-bold mb-3" data-i18n="auto_hide_label">auto hide settings</div>
+						<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="default_mounts_label">auto hide default mounts</span>
+							<input type="checkbox" id="auto_mount" class="toggle toggle-md toggle-primary" checked="checked" />
+						</label>
+						</div>
+						<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="bind_mounts_label">auto hide bind mounts</span>
+							<input type="checkbox" id="auto_bind" class="toggle toggle-md toggle-secondary" checked="checked" />
+						</label>
+						</div>
+						<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="try_umount_bind_label">auto try umount bind mounts</span>
+							<input type="checkbox" id="auto_umount_bind" class="toggle toggle-md toggle-accent" checked="checked" />
+						</label>
+						</div>
+						<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="auto_try_umount_label">auto try umount (userspace)</span>
+							<input type="checkbox" id="auto_try_umount" class="toggle toggle-md toggle-primary" checked="checked" />
+						</label>
+						</div>
+						<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="hide_sus_mnts_for_all_procs_label">Hide sus_mounts for all processes</span>
+							<input type="checkbox" id="hide_sus_mnts_for_all_procs" class="toggle toggle-md toggle-warning" checked="checked" disabled/>
+						</label>
+						</div>
+						<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="zygote_try_umount_label">try umount for zygote system process</span>
+							<input type="checkbox" id="try_umount_zygote" class="toggle toggle-md toggle-success" checked="checked" />
+						</label>
+						</div>
+						<div class="form-control">
+						<label class="label cursor-pointer">
+							<span class="text-white text-base" data-i18n="umount_for_zygote_iso_service_label">try umount for zygote isolation service</span>
+							<input type="checkbox" id="umount_for_zygote_iso_service" class="toggle toggle-md toggle-success" checked="checked" disabled/>
+						</label>
+						</div>
+				    </div>
+				</div>
+				<div class="stats flex flex-col bg-cyan-100/20 dark:bg-black/20 mt-5 border-2 border-white backdrop-blur-[2.5px] min-w-full sm:min-w-[400px]">
+					<div class="stat">
+						<div class="stat-title text-lg text-white" data-i18n="kernel_uname_label">Kernel Uname</div>
+						<p class="text-white text-sm break-all font-sans normal-case font-normal" id="kernel_version"></p>
+					</div>
+					<div class="stat">
+						<div class="text-sm flex flex-col text-white">
+							<p data-i18n="spoofed_kernel_version_label">Spoofed Kernel Version</p>
+							<p class="text-white text-xs break-all font-sans normal-case font-normal ml-1" id="spoofed_kernel_version"></p> 
+						</div>
+						<div class="text-sm flex flex-col pb-2 text-white">
+							<p data-i18n="spoofed_kernel_build_label">Spoofed Kernel Build</p>
+							<p class="text-white text-xs break-all font-sans normal-case font-normal ml-1" id="spoofed_kernel_build"></p>
+						</div>
+						<div class="stat-title text-base text-white" data-i18n="spoof_kernel_version_label">Spoof Kernel Version</div>
+						<div class="flex items-center gap-2">
+							<input type="text" id="sus_uname" placeholder="default" class="input input-sm text-sm font-sans flex-1 font-normal"/>
+							<input type="checkbox" id="sus_uname_checkbox" class="checkbox checkbox-sm checkbox-primary"/>
+						</div>
+						<div class="stat-title text-base text-white" data-i18n="spoof_kernel_build_label">Spoof Kernel Build</div>
+						<div class="flex items-center gap-2">
+							<input type="text" id="sus_uname_build" placeholder="default" class="input input-sm text-sm font-sans flex-1 font-normal"/>
+							<input type="checkbox" id="sus_uname_build_checkbox" class="checkbox checkbox-sm checkbox-primary"/>
+						</div>
+						<div class="form-control">
+							<label class="label cursor-pointer">
+							<span class="text-white text-sm font-amongus2" data-i18n="spoof_on_boot_label">Spoof on boot</span>
+							<input type="checkbox" id="uname-spoof-on-boot" class="checkbox checkbox-sm checkbox-primary" checked="checked"/>
+							</label>
+						</div>
+						<div id="uname-at-postfs" class="form-control hidden">
+							<label class="label cursor-pointer">
+							<span class="text-white text-sm font-amongus2" data-i18n="post_fs_data_label">Execute on post-fs-data (spoofs better)</span>
+							<input type="checkbox" id="uname-spoof-on-postfsdata" class="checkbox checkbox-sm checkbox-primary" checked="checked"/>
+							</label>
+						</div>
+						<button class="btn btn-md btn-outline w-24 mt-2 border-white text-white text-sm font-normal" id="set_uname">Make it SuS</button>
+					</div>
+				</div>
+				<div class="stats flex flex-col divide-x-0 divide-y-0 white:bg-cyan-100/20 bg-cyan-100/20 dark:bg-black/20 mt-5 border-2 p-3 border-white backdrop-blur-[2.5px] min-w-full sm:min-w-[400px]">
+					<div class="stat-title pb-2 text-lg text-white" data-i18n="danger_zone_label">Danger Zone</div>
+					<div class="form-control">
+						<button class="btn btn-md btn-outline w-full mt-2 border-white text-white text-sm font-normal font-sans" id="susfs_send_logs" data-i18n="send_logs_label">Send Logs</button>
+						<button class="btn btn-md btn-outline w-full mt-2 border-green-500 text-white text-sm font-normal font-sans" id="susfs_export" data-i18n="export_config_label">Export Config</button>
+						<button class="btn btn-md btn-outline w-full mt-2 border-red-500 text-white text-sm font-normal font-sans" id="susfs_reset" data-i18n="reset_config_label">Reset All Config</button>
+					</div>
+				</div>
+			</section>
+		</div>
+	</main>
+	<script>
+		// Initialize translations after DOM is loaded
+		document.addEventListener('DOMContentLoaded', () => {
+		  window.i18n.init();
+		});
+	</script>
+</body>
+
+</html>

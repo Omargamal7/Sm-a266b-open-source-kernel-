@@ -1,0 +1,12 @@
+.idea
+.vscode
+CLAUDE.md
+AGENTS.md
+*.rej
+*.orig
+*.patch
+wild_ksu.jks
+keystore_base64.txt
+susfs4ksu
+Baseband-guard
+wild-old

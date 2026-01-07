@@ -1,0 +1,157 @@
+name: Build Kernels
+
+permissions:
+  contents: write
+  actions: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Choose Release Type"
+        required: true
+        type: choice
+        options:
+          - Actions
+          - Pre-Release
+          - Release
+        default: Actions
+
+jobs:
+
+  build-samsung:
+    uses: ./.github/workflows/kernel-samsung.yml
+    secrets: inherit
+
+  release:
+    runs-on: ubuntu-latest
+    if: inputs.release_type != 'Actions'
+    needs:
+      - build-samsung
+
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_NAME: "Samsung GKI Kernels With WKSU & SUSFS v1.5.12"
+      RELEASE_BODY: ""
+    steps:
+      - name: Download Apache Arrow's util_free_space.sh
+        run: |
+          curl -L -o util_free_space.sh https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh
+          chmod +x util_free_space.sh
+          ./util_free_space.sh
+      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate New Tag
+        if: inputs.release_type != 'Actions'
+        run: |
+            LATEST_TAG=$(gh api repos/${{ github.repository }}/tags --jq '.[0].name' 2>/dev/null || echo "")
+            if [ -z "$LATEST_TAG" ]; then
+              LATEST_TAG="v1.5.12-r0"
+            fi
+            
+            NEW_TAG=$(echo "$LATEST_TAG" | awk -F'-r' '{suffix=$2; if (!suffix) suffix=0; suffix++; printf "%s-r%d", $1, suffix}')
+    
+            echo "New tag: $NEW_TAG"
+            echo "NEW_TAG=${NEW_TAG}" >> $GITHUB_ENV
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: ./downloaded-artifacts
+          pattern: '*-AnyKernel3'
+
+      - name: Set release body
+        run: |
+          cat << 'EOF' > release_body.md
+      
+          **IMPORTANT DISCLAIMER**
+          This software is provided for testing and educational purposes only. Use at your own risk.
+          The developers are not responsible for any damage, data loss, or issues that may occur.
+          Please ensure you have proper backups before installation.
+
+          Features:
+          -> Wild KSU
+          -> Multi Manager Support for WKSU, KernelSU-Next! Needs Testing: KSU, MKSU RKSU, xxKSU, KowSU and SukiSU (Best compatibility with WKSU, no support will be provided for other managers)
+          -> SUSFS ඞ v1.5.12
+          -> Scope-Minimized Manual hooks v1.4
+          -> Ptrace Patch Support for Older Kernels (<5.16)
+          -> IPSet Support for Advanced Network Filtering
+          -> Wireguard Support
+          -> BBR v1 Support
+          -> Kernel Sound System: Basic audio support with PCM, timers, procfs info, dynamic devices, and loopback module (module found at /data/adb/lkm after install)
+          -> Added BBG support to prevent unauthorised writes to certain partitions: https://github.com/vc-teahouse/Baseband-guard
+
+          🔹 BBG (Baseband-guard)
+          - A lightweight LSM (Linux Security Module) for Android kernel
+          - Blocks unauthorized writes to critical partitions/device nodes
+          - Prevents malicious tampering with baseband and boot chain
+          - Kernel-level protection via LSM hooks
+          - Reduces risk of soft-brick/hard-brick issues
+
+          Notes:
+          -> SUS SU Mode 2 will show as disabled or not compatible due to non-kprobe hooks and is not needed anymore!
+          -> Official Kernel Flasher is broken with latest susfs, try https://github.com/fatalcoder524/KernelFlasher/
+          -> **boot.img files**: Available as CI artifacts only - download from the Actions tab in the "Misc" Artifact
+          -> **Warning**: boot.img files may not boot on some devices
+          -> **Note:** For detailed commit information and component versions, please check the build summary in the "Misc" Artifact
+
+          Module: 
+          -> https://github.com/sidex15/ksu_module_susfs
+      
+          Managers:
+          -> WKSU: https://github.com/WildKernels/Wild_KSU
+          -> Next: https://github.com/KernelSU-Next/KernelSU-Next
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.NEW_TAG }}
+          prerelease: ${{ inputs.release_type == 'Pre-Release' }}
+          files: ""
+          name: ${{ env.RELEASE_NAME }}
+          body_path: release_body.md
+
+      - name: Upload Release Assets
+        run: |
+          shopt -s nullglob
+          anykernel_dirs=(./downloaded-artifacts/*/)
+          if [ ${#anykernel_dirs[@]} -eq 0 ]; then
+            echo "No artifact directories found under ./downloaded-artifacts; skipping upload."
+          else
+            for dir in "${anykernel_dirs[@]}"; do
+              # Check if this is an AnyKernel3 artifact directory
+              if [[ "$(basename "$dir")" == *"-AnyKernel3" ]]; then
+                artifact_name=$(basename "$dir")
+                echo "Creating ZIP for $artifact_name..."
+                # Navigate into the directory and zip its contents directly
+                cd "$dir"
+                zip -r -9 "../../${artifact_name}.zip" ./*
+                cd - > /dev/null
+                echo "Uploading ${artifact_name}.zip..."
+                gh release upload ${{ env.NEW_TAG }} "${artifact_name}.zip"
+              fi
+            done
+          fi
+            
+      - name: Send Telegram Notification
+        if: inputs.release_type != 'Actions'
+        run: |
+          RELEASE_TYPE_TEXT=""
+          if [ "${{ inputs.release_type }}" == "Pre-Release" ]; then
+            RELEASE_TYPE_TEXT="🧪 *Pre-Release*"
+          else
+            RELEASE_TYPE_TEXT="🚀 *Release*"
+          fi
+          
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_GKI }}" \
+            -F text="
+            🌽 *New Kernel $RELEASE_TYPE_TEXT Uploaded*  
+            📦 *Repository:* [${{ github.repository }}](https://github.com/${{ github.repository }})  
+            ✏️ *Commit:* [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})  
+            [🔗 View GitHub Release](https://github.com/${{ github.repository }}/releases/tag/${{ env.NEW_TAG }})" \
+            -F parse_mode="Markdown"

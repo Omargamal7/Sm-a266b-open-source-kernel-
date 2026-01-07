@@ -1,0 +1,347 @@
+name: Build Manager CI
+
+on:
+  push:
+    branches: [ "wild" ]
+    #paths:
+    #  - '.github/workflows/build-manager.yml'
+    #  - '.github/workflows/build-lkm.yml'
+    #  - '.github/workflows/ksud.yml'
+    #  - 'manager/**'
+    # - 'kernel/**'
+    # - 'userspace/**'
+  pull_request:
+    branches: [ "wild" ]
+    #paths:
+    #  - '.github/workflows/build-manager.yml'
+    #  - '.github/workflows/build-lkm.yml'
+    #  - '.github/workflows/ksud.yml'
+    #  - 'manager/**'
+    # - 'kernel/**'
+    # - 'userspace/**'
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  prepare-tag:
+    if: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/wild' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag_name: ${{ steps.create_tag.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create Tag
+        id: create_tag
+        run: |
+          BASE_VERSION="v4.2.0"
+          TAGS=$(git tag -l "${BASE_VERSION}-r*")
+          if [ -z "$TAGS" ]; then
+            NEW_TAG="${BASE_VERSION}-r1"
+          else
+            LAST_NUM=$(echo "$TAGS" | sed "s/${BASE_VERSION}-r//" | sort -n | tail -1)
+            NEXT_NUM=$((LAST_NUM + 1))
+            NEW_TAG="${BASE_VERSION}-r${NEXT_NUM}"
+          fi
+          echo "Generated tag: $NEW_TAG"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+          echo "tag_name=$NEW_TAG" >> $GITHUB_OUTPUT
+
+  build-lkm:
+    needs: [prepare-tag]
+    if: always() && (needs.prepare-tag.result == 'success' || needs.prepare-tag.result == 'skipped')
+    uses: ./.github/workflows/build-lkm.yml
+    secrets: inherit
+
+  build-ksuinit:
+    needs: [prepare-tag]
+    if: always() && (needs.prepare-tag.result == 'success' || needs.prepare-tag.result == 'skipped')
+    uses: ./.github/workflows/ksuinit.yml
+
+  build-ksud:
+    needs: [build-lkm, build-ksuinit]
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-linux-android
+            os: ubuntu-latest
+          - target: x86_64-linux-android
+            os: ubuntu-latest
+    uses: ./.github/workflows/ksud.yml
+    with:
+      target: ${{ matrix.target }}
+      os: ${{ matrix.os }}
+
+  build-ksud-extra:
+    needs: [build-lkm, build-ksuinit]
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-pc-windows-gnu # windows pc
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin # Intel mac
+            os: macos-latest
+          - target: aarch64-apple-darwin # M chip mac
+            os: macos-latest
+          - target: aarch64-unknown-linux-musl # arm64 Linux
+            os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl # x86 Linux
+            os: ubuntu-latest
+    uses: ./.github/workflows/ksud.yml
+    with:
+      target: ${{ matrix.target }}
+      os: ${{ matrix.os }}
+
+  build-manager:
+    needs: build-ksud
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        spoofed: [ false, true ]
+
+    defaults:
+      run:
+        working-directory: ./manager
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Spoof Package ID
+        if: matrix.spoofed == true
+        run: |
+          chmod +x spoof
+          ./spoof
+
+      - name: Setup need_upload
+        id: need_upload
+        run: |
+          if [ ! -z "${{ secrets.TELEGRAM_BOT_TOKEN }}" ]; then
+            echo "UPLOAD=true" >> $GITHUB_OUTPUT
+          else
+            echo "UPLOAD=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Write key
+        run: |
+          if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
+            {
+              echo KEYSTORE_PASSWORD='${{ secrets.KEYSTORE_PASSWORD }}'
+              echo KEY_ALIAS='${{ secrets.KEY_ALIAS }}'
+              echo KEY_PASSWORD='${{ secrets.KEY_PASSWORD }}'
+              echo KEYSTORE_FILE='key.jks'
+            } >> gradle.properties
+            echo "${{ secrets.KEYSTORE }}" | base64 -d > key.jks
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Download arm64 ksud
+        uses: actions/download-artifact@v6
+        with:
+          name: ksud-aarch64-linux-android
+          path: .
+
+      - name: Download x86_64 ksud
+        uses: actions/download-artifact@v6
+        with:
+          name: ksud-x86_64-linux-android
+          path: .
+
+      - name: Copy ksud to app jniLibs
+        run: |
+          mkdir -p app/src/main/jniLibs/arm64-v8a
+          mkdir -p app/src/main/jniLibs/x86_64
+          cp -f ../aarch64-linux-android/release/ksud ../manager/app/src/main/jniLibs/arm64-v8a/libksud.so
+          cp -f ../x86_64-linux-android/release/ksud ../manager/app/src/main/jniLibs/x86_64/libksud.so
+
+      - name: Build with Gradle
+        run: ./gradlew clean assembleRelease
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v5
+        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/wild' )) || github.ref_type == 'tag' }}
+        with:
+          name: ${{ matrix.spoofed && 'manager-spoofed' || 'manager' }}
+          path: manager/app/build/outputs/apk/release/*.apk
+
+      - name: Upload mappings
+        uses: actions/upload-artifact@v5
+        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/wild' )) || github.ref_type == 'tag' }}
+        with:
+          name: ${{ matrix.spoofed && 'mappings-spoofed' || 'mappings' }}
+          path: "manager/app/build/outputs/mapping/release/"
+
+  create-release:
+    if: needs.prepare-tag.result == 'success'
+    needs: [prepare-tag, build-manager, build-lkm]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Rename Spoofed APKs
+        run: |
+          for file in manager-spoofed/*.apk; do
+            mv "$file" "manager-spoofed/$(basename "$file" | sed 's/Wild_KSU/Wild_KSU_Spoofed/')"
+          done
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-tag.outputs.tag_name }}
+          body: ${{ github.event.head_commit.message }}
+          files: |
+            manager/*.apk
+            manager-spoofed/*.apk
+
+  upload-telegram-manager:
+    if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/wild' )) || github.ref_type == 'tag' }}
+    needs: build-manager
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Normal Manager
+        uses: actions/download-artifact@v6
+        with:
+          name: manager
+          path: manager
+
+      - name: Download Spoofed Manager
+        uses: actions/download-artifact@v6
+        with:
+          name: manager-spoofed
+          path: manager-spoofed
+
+      - name: Send Telegram notification and APKs
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          MESSAGE=$(cat <<EOF
+          New Wild KSU CI Build Finished
+
+          Repository: https://github.com/${REPO}
+          Workflow: https://github.com/${REPO}/actions/runs/${RUN_ID}
+          Commit: https://github.com/${REPO}/commit/${COMMIT_SHA}
+
+          Commit message:
+          ${COMMIT_MESSAGE}
+          EOF
+              )
+
+              echo "Sending Telegram message..."
+              RESPONSE=$(curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_WKSU }}" \
+                -F text="$MESSAGE")
+
+              echo "$RESPONSE" | grep -q '"ok":true'
+              echo "Message sent."
+
+              echo "Uploading normal manager APKs..."
+              for apk in ./manager/*.apk; do
+                [ -e "$apk" ] || continue
+                echo "Uploading $apk"
+                curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+                  -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                  -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_WKSU }}" \
+                  -F caption="Manager release: Normal" \
+                  -F document=@"$apk"
+              done
+
+              echo "Uploading spoofed manager APKs..."
+              for apk in ./manager-spoofed/*.apk; do
+                [ -e "$apk" ] || continue
+                echo "Uploading $apk"
+                curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+                  -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                  -F message_thread_id="${{ secrets.TELEGRAM_TOPIC_ID_WKSU }}" \
+                  -F caption="Manager release: Spoofed" \
+                  -F document=@"$apk"
+              done
+
+              echo "All uploads completed successfully."
+
+      - name: DM Artifacts
+        if: always()
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          MESSAGE=$(cat <<EOF
+          New Wild KSU CI Build Finished
+
+          Repository: https://github.com/${REPO}
+          Workflow: https://github.com/${REPO}/actions/runs/${RUN_ID}
+          Commit: https://github.com/${REPO}/commit/${COMMIT_SHA}
+
+          Commit message:
+          ${COMMIT_MESSAGE}
+          EOF
+              )
+          # Check for Normal artifacts
+          for apk in ./manager/*.apk; do
+            if [ -f "$apk" ]; then
+              echo "Sending Telegram message..."
+              curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                -F chat_id="${{ secrets.TELEGRAM_USER_ID }}" \
+                -F text="$MESSAGE"
+
+              echo "Sending $apk to Telegram DM..."
+              curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument" \
+                  -F chat_id="${{ secrets.TELEGRAM_USER_ID }}" \
+                  -F document=@"$apk" \
+                  -F caption="📦 Build: $(basename "$apk")"
+            fi
+          done
+
+  cleanup-tag:
+    if: failure() && needs.prepare-tag.result == 'success'
+    needs: [prepare-tag, build-lkm, build-manager, create-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Delete Tag and Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ needs.prepare-tag.outputs.tag_name }}"
+          if [ ! -z "$TAG_NAME" ]; then
+             echo "Deleting tag and release for $TAG_NAME due to failure"
+             gh release delete "$TAG_NAME" --cleanup-tag --yes || git push --delete origin "$TAG_NAME"
+          fi
+
+
+
+
+
