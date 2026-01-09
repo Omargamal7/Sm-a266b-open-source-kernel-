@@ -1,0 +1,51 @@
+========================================================================
+QUICK GIT COMMANDS - Copy and Paste These Commands
+========================================================================
+
+SCENARIO: You have a local branch "kernelsu" and want to push it to 
+          remote as "Wildksu" to match PR #22
+
+------------------------------------------------------------------------
+RECOMMENDED COMMANDS (if you want to push your local changes):
+------------------------------------------------------------------------
+
+# Step 1: Make sure you're on the kernelsu branch
+git checkout kernelsu
+
+# Step 2: Push your local kernelsu branch to remote as Wildksu
+git push origin kernelsu:Wildksu
+
+# Step 3: Verify the push
+git ls-remote origin | grep Wildksu
+
+------------------------------------------------------------------------
+ALTERNATIVE: If you want to rename your local branch to match:
+------------------------------------------------------------------------
+
+# Step 1: Rename your local branch
+git branch -m kernelsu Wildksu
+
+# Step 2: Push and set upstream
+git push -u origin Wildksu
+
+# Step 3: Verify
+git branch -a
+
+------------------------------------------------------------------------
+IF YOU NEED TO FORCE UPDATE (overwrite remote):
+------------------------------------------------------------------------
+
+# Only use if you need to overwrite the remote branch!
+git checkout kernelsu
+git push --force origin kernelsu:Wildksu
+
+------------------------------------------------------------------------
+CURRENT STATUS:
+------------------------------------------------------------------------
+- Remote: https://github.com/Omargamal7/Sm-a266b-open-source-kernel-.git
+- PR #22 expects branch: Wildksu
+- The Wildksu branch already exists on GitHub
+- PR #22 is showing changes (1 file, 34 additions)
+- Commit SHA: 54467e1db4b3cc614cc91a65176a8ef45588c54f
+
+========================================================================
