@@ -13,7 +13,6 @@ jobs:
     env:
       KERNEL_DIR: kernel/opensource
       DEFCONFIG_TARGET: s5e8835-a26xxx_defconfig
-      DEFCONFIG_PATH: arch/arm64/configs/s5e8835-a26xxx_defconfig
 
     steps:
       - name: Checkout repository
@@ -26,8 +25,12 @@ jobs:
 
       - name: Ensure kernel config exists
         run: |
+          if [ ! -d "$KERNEL_DIR" ]; then
+            echo "Kernel directory $KERNEL_DIR not found"
+            exit 1
+          fi
           if [ ! -f "$KERNEL_DIR/.config" ]; then
-            if [ -f "$KERNEL_DIR/$DEFCONFIG_PATH" ]; then
+            if [ -f "$KERNEL_DIR/arch/arm64/configs/$DEFCONFIG_TARGET" ]; then
               (cd "$KERNEL_DIR" && make "$DEFCONFIG_TARGET")
             else
               (cd "$KERNEL_DIR" && make defconfig)
