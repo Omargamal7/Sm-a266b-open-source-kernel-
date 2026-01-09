@@ -22,7 +22,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison flex build-essential libc6-dev libssl-dev libelf-dev dwarves rsync python3
+          sudo apt install -y bc bison flex build-essential libc6-dev libncurses-dev libssl-dev libelf-dev dwarves rsync python3
 
       - name: Ensure kernel config exists
         run: |
