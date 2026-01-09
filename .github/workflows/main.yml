@@ -10,6 +10,9 @@ jobs:
   build:
     name: Build Kernel
     runs-on: ubuntu-22.04
+    env:
+      KERNEL_DIR: kernel/opensource
+      DEFCONFIG: arch/arm64/configs/s5e8835-a26xxx_defconfig
 
     steps:
       - name: Checkout repository
@@ -22,11 +25,11 @@ jobs:
 
       - name: Ensure kernel config exists
         run: |
-          if [ ! -f kernel/opensource/.config ]; then
-            if [ -f kernel/opensource/arch/arm64/configs/s5e8835-a26xxx_defconfig ]; then
-              cp kernel/opensource/arch/arm64/configs/s5e8835-a26xxx_defconfig kernel/opensource/.config
+          if [ ! -f "$KERNEL_DIR/.config" ]; then
+            if [ -f "$KERNEL_DIR/$DEFCONFIG" ]; then
+              cp "$KERNEL_DIR/$DEFCONFIG" "$KERNEL_DIR/.config"
             else
-              (cd kernel/opensource && make defconfig)
+              (cd "$KERNEL_DIR" && make defconfig)
             fi
           fi
 
