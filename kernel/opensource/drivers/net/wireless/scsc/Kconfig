@@ -435,7 +435,8 @@ config SCSC_WLAN_CUSTOM_TX_POWER
 	depends on SOC_S5E8835
 	default y
 	help
-	  This option enables SET_CUSTOM_TX_POWER_CALLING api to set max power backoff
+	  This option enables SET_CUSTOM_TX_POWER_CALLING API to set
+	  max power backoff.
 
 config SCSC_WLAN_TAS
 	bool "Enable WLAN TAS"
