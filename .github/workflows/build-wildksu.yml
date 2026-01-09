@@ -1,0 +1,95 @@
+name: Build WildKSU Kernel (SM-A266B)
+
+on:
+  push:
+    branches: [ wildksu ]
+  pull_request:
+    branches: [ wildksu ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            bc bison flex \
+            libssl-dev libelf-dev \
+            build-essential \
+            kmod dwarves \
+            rsync zip unzip
+
+      - name: Setup kernel build environment
+        working-directory: kernel/opensource
+        run: |
+          TOOLCHAIN_DIR="$GITHUB_WORKSPACE/kernel/opensource/toolchain"
+
+          echo "$TOOLCHAIN_DIR/clang/host/linux-x86/clang-r450784d/bin" >> $GITHUB_PATH
+          echo "$TOOLCHAIN_DIR/build/kernel/build-tools/path/linux-x86" >> $GITHUB_PATH
+
+          echo "ARCH=arm64" >> $GITHUB_ENV
+          echo "LLVM=1" >> $GITHUB_ENV
+          echo "PLATFORM_VERSION=13" >> $GITHUB_ENV
+          echo "ANDROID_MAJOR_VERSION=t" >> $GITHUB_ENV
+          echo "TARGET_SOC=s5e8835" >> $GITHUB_ENV
+          echo "DEPMOD=depmod" >> $GITHUB_ENV
+          echo 'DTC_FLAGS=-@' >> $GITHUB_ENV
+
+          echo "HOSTCFLAGS=--sysroot=$TOOLCHAIN_DIR/build/kernel/build-tools/sysroot -I$TOOLCHAIN_DIR/prebuilts/kernel-build-tools/linux-x86/include" >> $GITHUB_ENV
+          echo "HOSTLDFLAGS=--sysroot=$TOOLCHAIN_DIR/build/kernel/build-tools/sysroot -L$TOOLCHAIN_DIR/prebuilts/kernel-build-tools/linux-x86/lib64 -fuse-ld=lld" >> $GITHUB_ENV
+
+      - name: Apply WildKSU / SUSFS patches (if present)
+        working-directory: kernel/opensource
+        run: |
+          set -e
+          for p in \
+            kernel_patches-main/**/**/*.patch \
+            wildksu/**/*.patch
+          do
+            [ -f "$p" ] && patch -p1 < "$p" || true
+          done
+
+      - name: Build kernel
+        working-directory: kernel/opensource
+        run: |
+          make s5e8835-a26xxx_defconfig
+          make -j$(nproc)
+
+      - name: Package AnyKernel3
+        run: |
+          OUT="$GITHUB_WORKSPACE/output"
+          mkdir -p "$OUT"
+
+          cp kernel/opensource/anykernel.sh "$OUT/"
+          cp -r kernel/opensource/tools "$OUT/"
+          cp -r kernel/opensource/META-INF "$OUT/"
+
+          if [ -f kernel/opensource/arch/arm64/boot/Image.gz ]; then
+            cp kernel/opensource/arch/arm64/boot/Image.gz "$OUT/kernel"
+          else
+            cp kernel/opensource/arch/arm64/boot/Image "$OUT/kernel"
+          fi
+
+          cd "$OUT"
+          zip -r9 WildKSU-A26-AnyKernel.zip .
+
+      - name: Upload kernel image
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-image
+          path: kernel/opensource/arch/arm64/boot/Image*
+
+      - name: Upload flashable zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: WildKSU-A26-AnyKernel
+          path: output/WildKSU-A26-AnyKernel.zip
