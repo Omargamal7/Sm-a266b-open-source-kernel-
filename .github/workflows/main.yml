@@ -27,7 +27,7 @@ jobs:
         run: |
           if [ ! -f "$KERNEL_DIR/.config" ]; then
             if [ -f "$KERNEL_DIR/$DEFCONFIG" ]; then
-              cp "$KERNEL_DIR/$DEFCONFIG" "$KERNEL_DIR/.config"
+              (cd "$KERNEL_DIR" && make "$(basename "$DEFCONFIG")")
             else
               (cd "$KERNEL_DIR" && make defconfig)
             fi
