@@ -1,0 +1,34 @@
+name: Build Galaxy A26 Kernel
+
+on:
+  push:
+    branches:
+      - your-branch-name
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y bc bison flex libssl-dev build-essential \
+                              libelf-dev dwarves rsync python3
+
+      - name: Build kernel
+        run: |
+          chmod +x build_kernel.sh
+          ./build_kernel.sh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: a26-kernel
+          path: |
+            Image
+            arch/arm64/boot/dts
+            arch/arm64/boot/Image*
