@@ -18,7 +18,17 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison flex build-essential libssl-dev libelf-dev dwarves rsync python3
+          sudo apt install -y bc bison flex build-essential libc6-dev libssl-dev libelf-dev dwarves rsync python3
+
+      - name: Ensure kernel config exists
+        run: |
+          if [ ! -f kernel/opensource/.config ]; then
+            if [ -f kernel/opensource/arch/arm64/configs/s5e8835-a26xxx_defconfig ]; then
+              cp kernel/opensource/arch/arm64/configs/s5e8835-a26xxx_defconfig kernel/opensource/.config
+            else
+              (cd kernel/opensource && make defconfig)
+            fi
+          fi
 
       - name: Make build script executable
         run: chmod +x build_kernel.sh
