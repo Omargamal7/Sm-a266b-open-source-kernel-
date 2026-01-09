@@ -17,16 +17,20 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison flex build-essential libssl-dev \
-                              libelf-dev dwarves rsync python3
+          sudo apt install -y bc bison flex build-essential libc6-dev libncurses-dev \
+                              libssl-dev libelf-dev dwarves rsync python3
+
+      - name: Configure kernel
+        working-directory: kernel/opensource
+        run: make s5e8835-a26xxx_defconfig
 
       - name: Make build script executable
-        run: chmod +x build_kernel.sh
         working-directory: kernel/opensource
+        run: chmod +x build_kernel.sh
 
       - name: Build kernel
-        run: ./build_kernel.sh
         working-directory: kernel/opensource
+        run: ./build_kernel.sh
 
       - name: Upload kernel artifacts
         uses: actions/upload-artifact@v4
