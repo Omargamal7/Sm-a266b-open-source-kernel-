@@ -26,8 +26,8 @@ The `Wildksu` branch already exists on GitHub with your workflow changes. Howeve
 ### If you want to update the remote Wildksu branch from your local kernelsu branch:
 
 ```bash
-# Navigate to your repository
-cd /path/to/Sm-a266b-open-source-kernel-
+# Navigate to your repository (replace this path with your actual repo path)
+cd /path/to/YOUR_Sm-a266b-open-source-kernel_repo
 
 # Make sure you're on your kernelsu branch
 git checkout kernelsu
