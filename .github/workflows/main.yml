@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       KERNEL_DIR: kernel/opensource
-      DEFCONFIG: arch/arm64/configs/s5e8835-a26xxx_defconfig
+      DEFCONFIG_TARGET: s5e8835-a26xxx_defconfig
+      DEFCONFIG_PATH: arch/arm64/configs/s5e8835-a26xxx_defconfig
 
     steps:
       - name: Checkout repository
@@ -26,17 +27,19 @@ jobs:
       - name: Ensure kernel config exists
         run: |
           if [ ! -f "$KERNEL_DIR/.config" ]; then
-            if [ -f "$KERNEL_DIR/$DEFCONFIG" ]; then
-              (cd "$KERNEL_DIR" && make "$(basename "$DEFCONFIG")")
+            if [ -f "$KERNEL_DIR/$DEFCONFIG_PATH" ]; then
+              (cd "$KERNEL_DIR" && make "$DEFCONFIG_TARGET")
             else
               (cd "$KERNEL_DIR" && make defconfig)
             fi
           fi
 
       - name: Make build script executable
+        working-directory: ${{ env.KERNEL_DIR }}
         run: chmod +x build_kernel.sh
 
       - name: Build kernel
+        working-directory: ${{ env.KERNEL_DIR }}
         run: ./build_kernel.sh
 
       - name: Upload kernel artifacts
@@ -44,6 +47,6 @@ jobs:
         with:
           name: kernel-image
           path: |
-            Image
-            arch/arm64/boot/*.dtb
-            arch/arm64/boot/Image*
+            ${{ env.KERNEL_DIR }}/Image
+            ${{ env.KERNEL_DIR }}/arch/arm64/boot/*.dtb
+            ${{ env.KERNEL_DIR }}/arch/arm64/boot/Image*
