@@ -3,7 +3,7 @@ name: Build Samsung Galaxy A26 Kernel (KernelSU)
 on:
   push:
     branches:
-      - kernelsu
+      - Wildksu
   workflow_dispatch:
 
 jobs:
@@ -22,15 +22,17 @@ jobs:
 
       - name: Make build script executable
         run: chmod +x build_kernel.sh
+        working-directory: kernel/opensource
 
       - name: Build kernel
         run: ./build_kernel.sh
+        working-directory: kernel/opensource
 
       - name: Upload kernel artifacts
         uses: actions/upload-artifact@v4
         with:
           name: kernelsu-a26-build
           path: |
-            Image
-            arch/arm64/boot/*.dtb
-            arch/arm64/boot/Image*
+            kernel/opensource/Image
+            kernel/opensource/arch/arm64/boot/dts/**/*.dtb
+            kernel/opensource/arch/arm64/boot/Image*
