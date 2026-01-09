@@ -10,6 +10,10 @@ jobs:
   build:
     name: Build Kernel
     runs-on: ubuntu-22.04
+    env:
+      KERNEL_DIR: kernel/opensource
+      ARCH_PATH: arch/arm64
+      DEFCONFIG_TARGET: s5e8835-a26xxx_defconfig
 
     steps:
       - name: Checkout repository
@@ -18,12 +22,32 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison flex build-essential libssl-dev libelf-dev dwarves rsync python3
+          sudo apt install -y bc bison flex build-essential libc6-dev libssl-dev libelf-dev dwarves rsync python3
+
+      - name: Ensure kernel config exists
+        run: |
+          if [ ! -d "$KERNEL_DIR" ]; then
+            echo "Kernel directory not found at $(pwd)/$KERNEL_DIR"
+            exit 1
+          fi
+          cd "$KERNEL_DIR"
+          if [ ! -d "$ARCH_PATH" ]; then
+            echo "Architecture path not found at $(pwd)/$ARCH_PATH"
+            exit 1
+          fi
+          DEFCONFIG_PATH="$ARCH_PATH/configs/$DEFCONFIG_TARGET"
+          if [ ! -f "$DEFCONFIG_PATH" ]; then
+            echo "Defconfig file not found at $(pwd)/$DEFCONFIG_PATH"
+            echo "Ensure that $DEFCONFIG_TARGET exists in $ARCH_PATH/configs before running build_kernel.sh"
+            exit 1
+          fi
 
       - name: Make build script executable
+        working-directory: ${{ env.KERNEL_DIR }}
         run: chmod +x build_kernel.sh
 
       - name: Build kernel
+        working-directory: ${{ env.KERNEL_DIR }}
         run: ./build_kernel.sh
 
       - name: Upload kernel artifacts
@@ -31,6 +55,6 @@ jobs:
         with:
           name: kernel-image
           path: |
-            Image
-            arch/arm64/boot/*.dtb
-            arch/arm64/boot/Image*
+            ${{ env.KERNEL_DIR }}/Image
+            ${{ env.KERNEL_DIR }}/${{ env.ARCH_PATH }}/boot/*.dtb
+            ${{ env.KERNEL_DIR }}/${{ env.ARCH_PATH }}/boot/Image*
