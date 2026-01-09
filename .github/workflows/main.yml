@@ -27,15 +27,15 @@ jobs:
       - name: Ensure kernel config exists
         run: |
           if [ ! -d "$KERNEL_DIR" ]; then
-            echo "Kernel directory $KERNEL_DIR not found at $(pwd)/$KERNEL_DIR"
+            echo "Kernel directory not found at $(pwd)/$KERNEL_DIR"
             exit 1
           fi
-          if [ ! -f "$KERNEL_DIR/.config" ]; then
-            DEFCONFIG_PATH="$ARCH_PATH/configs/$DEFCONFIG_TARGET"
-            if [ -f "$KERNEL_DIR/$DEFCONFIG_PATH" ]; then
-              (cd "$KERNEL_DIR" && make "$DEFCONFIG_TARGET") || { echo "Failed to generate $DEFCONFIG_TARGET"; exit 1; }
+          cd "$KERNEL_DIR"
+          if [ ! -f ".config" ]; then
+            if [ -f "$ARCH_PATH/configs/$DEFCONFIG_TARGET" ]; then
+              make "$DEFCONFIG_TARGET" || { echo "Failed to generate $DEFCONFIG_TARGET"; exit 1; }
             else
-              (cd "$KERNEL_DIR" && make defconfig) || { echo "Failed to generate default config"; exit 1; }
+              make defconfig || { echo "Failed to generate default config"; exit 1; }
             fi
           fi
 
