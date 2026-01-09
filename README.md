@@ -31,6 +31,10 @@ This repository provides automated workflows for importing, organizing, and mana
 
 Contributions are welcome! Please read [HELP.md](HELP.md) for more information.
 
+## Custom automation
+
+This repository does not include a general-purpose “custom agent” that can fix issues automatically. If you need new automation, please open an issue with specific requirements so it can be designed appropriately.
+
 ## License
 
 Kernel source code is licensed under GPL v2. See individual files for specific licensing.
