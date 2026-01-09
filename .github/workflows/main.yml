@@ -30,8 +30,8 @@ jobs:
             echo "Kernel directory not found at $(pwd)/$KERNEL_DIR"
             exit 1
           fi
-          DEFCONFIG_PATH="$KERNEL_DIR/$ARCH_PATH/configs/$DEFCONFIG_TARGET"
           cd "$KERNEL_DIR"
+          DEFCONFIG_PATH="$ARCH_PATH/configs/$DEFCONFIG_TARGET"
           if [ ! -f ".config" ]; then
             if [ -f "$DEFCONFIG_PATH" ]; then
               make "$DEFCONFIG_TARGET" || { echo "Failed to generate $DEFCONFIG_TARGET"; exit 1; }
