@@ -34,5 +34,5 @@ jobs:
           name: kernelsu-a26-build
           path: |
             kernel/opensource/Image
-            kernel/opensource/arch/arm64/boot/*.dtb
+            kernel/opensource/arch/arm64/boot/dts/**/*.dtb
             kernel/opensource/arch/arm64/boot/Image*
