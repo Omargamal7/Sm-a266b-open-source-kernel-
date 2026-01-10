@@ -33,8 +33,14 @@ fi
 export PATH="${CLANG_PREBUILT_DIR}/bin:${ROOT_DIR}/${BUILDTOOLS_PREBUILT_BIN}:${PATH}"
 
 # Use build-tools sysroot and kernel-build-tools libraries for host tools.
-export HOSTCFLAGS="--sysroot=${BUILDTOOLS_SYSROOT} -I${KERNEL_BUILD_TOOLS_PREBUILT}/include"
-export HOSTLDFLAGS="--sysroot=${BUILDTOOLS_SYSROOT} -Wl,-rpath,${KERNEL_BUILD_TOOLS_PREBUILT}/lib64 -L ${KERNEL_BUILD_TOOLS_PREBUILT}/lib64 -fuse-ld=lld --rtlib=compiler-rt"
+if [[ -f "${BUILDTOOLS_SYSROOT}/usr/include/sys/types.h" ]]; then
+  export HOSTCFLAGS="--sysroot=${BUILDTOOLS_SYSROOT} -I${KERNEL_BUILD_TOOLS_PREBUILT}/include"
+  export HOSTLDFLAGS="--sysroot=${BUILDTOOLS_SYSROOT} -Wl,-rpath,${KERNEL_BUILD_TOOLS_PREBUILT}/lib64 -L ${KERNEL_BUILD_TOOLS_PREBUILT}/lib64 -fuse-ld=lld --rtlib=compiler-rt"
+else
+  export HOSTCFLAGS="-I${KERNEL_BUILD_TOOLS_PREBUILT}/include"
+  export HOSTLDFLAGS="-Wl,-rpath,${KERNEL_BUILD_TOOLS_PREBUILT}/lib64 -L ${KERNEL_BUILD_TOOLS_PREBUILT}/lib64 -fuse-ld=lld --rtlib=compiler-rt"
+fi
+export HOSTCC=gcc
 
 # Ensure dtc follows build.config.common's expected location.
 export DTC="${ROOT_DIR}/${BUILDTOOLS_PREBUILT_BIN}/dtc"
