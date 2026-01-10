@@ -78,19 +78,27 @@ Similar to the first workflow but uses full Google Drive URLs instead of just fi
 
 ### Building the Kernel
 
-After importing the kernel source files:
+After importing the kernel source files, this repository expects to be built
+inside an Android (AOSP) build tree so it can use the AOSP prebuilts.
 
-1. **Navigate to the kernel directory:**
+1. **Start from the Android build tree root (AOSP):**
    ```bash
-   cd kernel/opensource
+   cd /path/to/aosp
    ```
 
-2. **Follow standard kernel building procedures:**
-   - Set up your build environment (toolchain, dependencies)
-   - Configure the kernel for SM-A266B
-   - Build using the appropriate kernel build commands
+2. **Ensure the AOSP prebuilts are present:**
+   - `prebuilts/clang/host/linux-x86/clang-r450784d/bin`
+   - `build/kernel/build-tools/path/linux-x86` (provides `dtc`)
+   - `prebuilts/kernel-build-tools/linux-x86`
 
-   *Note: Specific build instructions will depend on the kernel source structure.*
+   The kernel build expects `dtc` to resolve from:
+   `build/kernel/build-tools/path/linux-x86/dtc`
+
+3. **Run the build script from the kernel directory:**
+   ```bash
+   cd kernel/opensource
+   ./build_kernel.sh
+   ```
 
 ### Working with TWRP
 
