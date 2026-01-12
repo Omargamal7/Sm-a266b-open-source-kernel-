@@ -19,6 +19,10 @@ This repository provides automated workflows for importing, organizing, and mana
 - Troubleshooting common issues
 - Security considerations
 
+🧹 **[Branch Management](HOW_TO_CLEANUP.md)** - Clean up messy branches and keep your repository organized
+
+📚 **[Best Practices Guide](BRANCH_CLEANUP_GUIDE.md)** - Learn how to avoid accidental branches and manage Git effectively
+
 ## Repository Structure
 
 - `kernel/opensource/` - Open source kernel components
