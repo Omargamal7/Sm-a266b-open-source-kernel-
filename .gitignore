@@ -20,6 +20,7 @@ Module.symvers
 *.pch
 
 # Compiled Dynamic libraries
+*.so
 *.dylib
 *.dll
 
@@ -39,7 +40,6 @@ Module.symvers
 *.ko.cmd
 .*.d
 .*.tmp
-*.mod.c
 modules.builtin
 built-in.a
 
@@ -75,6 +75,7 @@ out/
 *.build/
 
 # Archives
+*.zip
 *.tar.gz
 *.tgz
 *.rar
@@ -84,7 +85,6 @@ out/
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
 .Python
 env/
 venv/
@@ -131,7 +131,6 @@ vendor_boot.img
 
 # Magisk build outputs
 magisk.zip
-*.zip
 
 # Git merge files
 *.orig

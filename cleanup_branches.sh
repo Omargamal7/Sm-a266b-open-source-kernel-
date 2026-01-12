@@ -98,7 +98,7 @@ for branch in "${ALL_BRANCHES_TO_DELETE[@]}"; do
     fi
     
     # Also delete local tracking branch if it exists
-    if git branch -r | grep -q "^[[:space:]]*origin/$branch$"; then
+    if git branch -r | grep -q "^[[:space:]]*origin/${branch}$"; then
         git branch -rd "origin/$branch" 2>&1 || true
     fi
 done
