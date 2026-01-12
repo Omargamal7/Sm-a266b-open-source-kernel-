@@ -25,7 +25,7 @@ After the import workflows run, the repository will contain:
 
 ### Import Workflows
 
-The repository provides multiple workflows to download kernel files from Google Drive. Both use file IDs but with different levels of error handling and features.
+The repository provides three workflows to download kernel files from Google Drive. Two use file IDs with different levels of error handling, and one uses full Google Drive URLs.
 
 #### 1. Import Drive Files (IDs) - Enhanced Version
 **File:** `.github/workflows/import-drive-files.yml`
@@ -106,13 +106,13 @@ The repository includes four build workflows. Three are configured for automatic
 
 #### 4. Build Galaxy A26 Kernel (Manual)
 **File:** `.github/workflows/build-a26x.yml`  
-**Trigger:** Manual (workflow_dispatch) or push to branch `your-branch-name` (placeholder - requires configuration)  
+**Trigger:** Manual (workflow_dispatch) or push to branch *your-branch-name* (placeholder - requires configuration)  
 **Features:**
 - Basic kernel build without KernelSU patches
 - Minimal dependencies
 - Artifacts: `a26-kernel`
 
-**Note:** This workflow is configured with a placeholder branch trigger (`your-branch-name`). Until configured with a real branch name, it can only be triggered manually via workflow_dispatch in the Actions tab.
+**Note:** This workflow is configured with a placeholder branch trigger (*your-branch-name*). Until configured with a real branch name, it can only be triggered manually via workflow_dispatch in the Actions tab.
 
 ## Common Tasks
 
