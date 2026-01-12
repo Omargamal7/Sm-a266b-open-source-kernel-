@@ -23,10 +23,14 @@ After the import workflows run, the repository will contain:
 
 ## Available Workflows
 
-### 1. Import Drive Files (IDs)
-**File:** `.github/workflows/import-drive-links.yml`
+### Import Workflows
 
-This workflow downloads kernel files from Google Drive using file IDs, sorts them into appropriate directories, and extracts archives.
+The repository provides three workflows to download kernel files from Google Drive. Two use file IDs with different levels of error handling, and one uses full Google Drive URLs.
+
+#### 1. Import Drive Files (IDs) - Enhanced Version
+**File:** `.github/workflows/import-drive-files.yml`
+
+Downloads kernel files from Google Drive using file IDs with comprehensive error handling.
 
 **How to run:**
 1. Go to the "Actions" tab in GitHub
@@ -34,8 +38,9 @@ This workflow downloads kernel files from Google Drive using file IDs, sorts the
 3. Click "Run workflow"
 4. Select the branch and click "Run workflow"
 
-**What it does:**
-- Downloads files from predefined Google Drive IDs
+**Features:**
+- Downloads files from predefined Google Drive file IDs
+- Robust error handling with `set -euo pipefail`
 - Sorts files into directories based on filename patterns:
   - Files with "platform" → `kernel/platform/`
   - Files with "twrp" or "recovery" → `twrp/`
@@ -46,7 +51,14 @@ This workflow downloads kernel files from Google Drive using file IDs, sorts the
 - Validates that no single file exceeds 95MB (GitHub file size limit)
 - Commits and pushes changes to the repository
 
-### 2. Import Drive Files (Links)
+#### 2. Import Drive Files (IDs) - Simple Version
+**File:** `.github/workflows/import-drive-links.yml`
+
+A simpler version of the import workflow with the same name but streamlined implementation.
+
+**Note:** This workflow has the same display name as the enhanced version above. Use import-drive-files.yml for more robust imports.
+
+#### 3. Import Drive Files (Links)
 **File:** `.github/workflows/import-from-gdrive-links.yml`
 
 Similar to the first workflow but uses full Google Drive URLs instead of just file IDs. This workflow includes additional features and more robust error handling.
@@ -61,6 +73,46 @@ Similar to the first workflow but uses full Google Drive URLs instead of just fi
 - More detailed logging
 - Better error handling with `set -euo pipefail`
 - Creates an import map file (`IMPORT_MAP.txt`) showing where each file was sorted
+- Uses full Google Drive URLs for better reliability
+
+### Build Workflows
+
+The repository includes four build workflows. Three are configured for automatic builds on specific branches, and one is available for manual triggering:
+
+#### 1. Build Galaxy A26 Kernel (kernelsu)
+**File:** `.github/workflows/main.yml`  
+**Branch:** `kernelsu`  
+**Features:**
+- Applies KernelSU/SUSFS patches from wildksu directory
+- Builds kernel with defconfig `s5e8835-a26xxx_defconfig`
+- Repacks init_boot.img with patched kernel
+- Artifacts: `kernel-image`, `init_boot_patched`
+
+#### 2. Build Samsung Galaxy A26 Kernel (KernelSU)
+**File:** `.github/workflows/build-kernelsu.yml`  
+**Branch:** `Wildksu`  
+**Features:**
+- Applies KernelSU/SUSFS patches
+- Builds and repacks init_boot.img
+- Artifacts: `kernelsu-a26-build`, `init_boot_patched`
+
+#### 3. Build WildKSU Kernel (SM-A266B)
+**File:** `.github/workflows/build-wildksu.yml`  
+**Branch:** `wildksu`  
+**Features:**
+- Applies WildKSU/SUSFS patches from wildksu directory
+- Creates AnyKernel3 flashable ZIP package
+- Artifacts: `kernel-image`, `init_boot_patched`, `WildKSU-A26-AnyKernel`
+
+#### 4. Build Galaxy A26 Kernel (Manual)
+**File:** `.github/workflows/build-a26x.yml`  
+**Trigger:** Manual (workflow_dispatch) or push to branch `your-branch-name` (placeholder - requires configuration)  
+**Features:**
+- Basic kernel build without KernelSU patches
+- Minimal dependencies
+- Artifacts: `a26-kernel`
+
+**Note:** This workflow is configured with a placeholder branch trigger (`your-branch-name`). Until configured with a real branch name, it can only be triggered manually via workflow_dispatch in the Actions tab.
 
 ## Common Tasks
 
@@ -85,25 +137,27 @@ The kernel can be built in two ways:
 The repository includes automated GitHub Actions workflows that build the kernel with KernelSU patches and repack it into init_boot.img:
 
 1. **Go to the Actions tab** in the GitHub repository
-2. **Select the appropriate workflow:**
-   - `Build Galaxy A26 Kernel (kernelsu)` - for the kernelsu branch
-   - `Build Samsung Galaxy A26 Kernel (KernelSU)` - for the Wildksu branch
-   - `Build WildKSU Kernel (SM-A266B)` - for the wildksu branch
-3. **Click "Run workflow"** and select the branch
+2. **Select the appropriate workflow based on your branch:**
+   - `Build Galaxy A26 Kernel (kernelsu)` - Builds from the `kernelsu` branch
+   - `Build Samsung Galaxy A26 Kernel (KernelSU)` - Builds from the `Wildksu` branch  
+   - `Build WildKSU Kernel (SM-A266B)` - Builds from the `wildksu` branch
+   - `Build Galaxy A26 Kernel` - Manual trigger, general purpose build
+3. **Click "Run workflow"** and select the appropriate branch
 4. **Wait for the build to complete** (typically 20-30 minutes)
 5. **Download artifacts:**
-   - `kernel-image` - compiled kernel Image and dtb files
+   - `kernel-image` or `kernelsu-a26-build` - compiled kernel Image and dtb files
    - `init_boot_patched` - patched init_boot.img with KernelSU kernel
-   - `WildKSU-A26-AnyKernel` - flashable AnyKernel3 ZIP (wildksu branch only)
+   - `WildKSU-A26-AnyKernel` - flashable AnyKernel3 ZIP (wildksu workflow only)
 
 The workflows automatically:
 - Install all required build dependencies
 - Download the correct toolchains (clang, gcc cross-compilers)
-- Apply KernelSU/SUSFS patches
+- Apply KernelSU/SUSFS patches (for KernelSU and WildKSU workflows)
 - Build the kernel
 - Unpack init_boot.img
 - Replace the kernel in init_boot.img with the patched version
 - Repack init_boot.img as `init_boot_patched.img`
+- Package AnyKernel3 flashable ZIP (wildksu workflow only)
 
 #### Option 2: Local Build in AOSP Environment
 
