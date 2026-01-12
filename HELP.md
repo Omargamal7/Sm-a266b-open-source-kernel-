@@ -23,6 +23,8 @@ After the import workflows run, the repository will contain:
 
 ## Available Workflows
 
+### Import Workflows
+
 ### 1. Import Drive Files (IDs)
 **Files:** `.github/workflows/import-drive-links.yml` and `.github/workflows/import-drive-files.yml`
 
@@ -62,6 +64,43 @@ Similar to the first workflow but uses full Google Drive URLs instead of just fi
 - Better error handling with `set -euo pipefail`
 - Creates an import map file (`IMPORT_MAP.txt`) showing where each file was sorted
 - Uses full Google Drive URLs for better reliability
+
+### Build Workflows
+
+The repository includes three automated build workflows for different branches:
+
+#### 1. Build Galaxy A26 Kernel (kernelsu)
+**File:** `.github/workflows/main.yml`  
+**Branch:** `kernelsu`  
+**Features:**
+- Applies KernelSU/SUSFS patches from wildksu directory
+- Builds kernel with defconfig `s5e8835-a26xxx_defconfig`
+- Repacks init_boot.img with patched kernel
+- Artifacts: `kernel-image`, `init_boot_patched`
+
+#### 2. Build Samsung Galaxy A26 Kernel (KernelSU)
+**File:** `.github/workflows/build-kernelsu.yml`  
+**Branch:** `Wildksu`  
+**Features:**
+- Applies KernelSU/SUSFS patches
+- Builds and repacks init_boot.img
+- Artifacts: `kernelsu-a26-build`, `init_boot_patched`
+
+#### 3. Build WildKSU Kernel (SM-A266B)
+**File:** `.github/workflows/build-wildksu.yml`  
+**Branch:** `wildksu`  
+**Features:**
+- Applies WildKSU/SUSFS patches from wildksu directory
+- Creates AnyKernel3 flashable ZIP package
+- Artifacts: `kernel-image`, `init_boot_patched`, `WildKSU-A26-AnyKernel`
+
+#### 4. Build Galaxy A26 Kernel
+**File:** `.github/workflows/build-a26x.yml`  
+**Trigger:** Manual (workflow_dispatch) or push to configured branch  
+**Features:**
+- Basic kernel build without KernelSU patches
+- Minimal dependencies
+- Artifacts: `a26-kernel`
 
 ## Common Tasks
 

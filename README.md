@@ -35,9 +35,9 @@ The automated build workflows provide:
 - Troubleshooting common issues
 - Security considerations
 
-🧹 **[Branch Management](HOW_TO_CLEANUP.md)** - Clean up messy branches and keep your repository organized
-
-📚 **[Best Practices Guide](BRANCH_CLEANUP_GUIDE.md)** - Learn how to avoid accidental branches and manage Git effectively
+📚 **Additional Guides:**
+- **[Branch Management Best Practices](BRANCH_CLEANUP_GUIDE.md)** - Learn how to manage Git branches effectively
+- **[Branch Cleanup Guide](HOW_TO_CLEANUP.md)** - Tools and scripts for repository organization
 
 ## Repository Structure
 
