@@ -4,7 +4,7 @@
 # This script will delete merged and abandoned branches
 # Run this script from the repository root
 
-set -e
+# Exit on error, but allow error handling in specific cases
 
 echo "==========================================="
 echo "Branch Cleanup Script"
@@ -89,7 +89,7 @@ for branch in "${ALL_BRANCHES_TO_DELETE[@]}"; do
     echo -n "Deleting $branch... "
     
     # Try to delete the remote branch
-    if git push origin --delete "$branch" 2>/dev/null; then
+    if git push origin --delete "$branch" 2>&1; then
         echo -e "${GREEN}✓ Deleted${NC}"
         ((deleted_count++))
     else
@@ -98,8 +98,8 @@ for branch in "${ALL_BRANCHES_TO_DELETE[@]}"; do
     fi
     
     # Also delete local tracking branch if it exists
-    if git branch -r | grep -q "origin/$branch"; then
-        git branch -rd "origin/$branch" 2>/dev/null || true
+    if git branch -r | grep -q "^[[:space:]]*origin/$branch$"; then
+        git branch -rd "origin/$branch" 2>&1 || true
     fi
 done
 

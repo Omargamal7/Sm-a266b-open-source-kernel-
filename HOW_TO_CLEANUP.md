@@ -11,8 +11,9 @@ I've created a script to automate the cleanup for you. Here's what to do:
    cd /path/to/Sm-a266b-open-source-kernel-
    ```
 
-2. Run the cleanup script:
+2. Make the script executable and run it:
    ```bash
+   chmod +x cleanup_branches.sh
    ./cleanup_branches.sh
    ```
 
