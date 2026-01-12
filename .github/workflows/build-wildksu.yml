@@ -2,9 +2,9 @@ name: Build WildKSU Kernel (SM-A266B)
 
 on:
   push:
-    branches: [ wildksu ]
+    branches: [ main, wildksu ]
   pull_request:
-    branches: [ wildksu ]
+    branches: [ main, wildksu ]
   workflow_dispatch:
 
 permissions:

@@ -3,6 +3,7 @@ name: Build Galaxy A26 Kernel (kernelsu)
 on:
   push:
     branches:
+      - main
       - kernelsu
   workflow_dispatch:
 

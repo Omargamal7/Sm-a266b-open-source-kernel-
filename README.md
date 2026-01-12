@@ -12,9 +12,8 @@ This repository provides automated workflows for importing, organizing, and mana
      - "Import Drive files (IDs) -> sort -> extract -> commit"
      - "Import Drive files (links) -> sort -> extract -> commit"
    - **Build workflows** - Compile the kernel with KernelSU and create init_boot.img
-     - "Build Galaxy A26 Kernel (kernelsu)" - for the kernelsu branch
-     - "Build Samsung Galaxy A26 Kernel (KernelSU)" - for the Wildksu branch
-     - "Build WildKSU Kernel (SM-A266B)" - for the wildksu branch
+     - "Build Galaxy A26 Kernel (kernelsu)" - runs on `main` and `kernelsu` branches
+     - "Build WildKSU Kernel (SM-A266B)" - runs on `main` and `wildksu` branches
 3. Run the workflow and download the artifacts
 
 ## Build Features
