@@ -136,6 +136,20 @@ jobs:
         with:
           name: init_boot_patched
           path: kernel/opensource/init_boot_patched.img
+      - name: Create Odin tar for init_boot
+        if: hashFiles('kernel/opensource/init_boot_patched.img') != ''
+        working-directory: kernel/opensource
+        run: |
+          # Prepare an Odin-flashable tar that contains init_boot.img
+          cp init_boot_patched.img init_boot.img
+          tar -H ustar -cvf init_boot_patched.tar init_boot.img
+
+      - name: Upload Odin init_boot tar
+        if: hashFiles('kernel/opensource/init_boot_patched.tar') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: init_boot_patched_odin_tar
+          path: kernel/opensource/init_boot_patched.tar
 
       - name: Upload flashable zip
         uses: actions/upload-artifact@v4
