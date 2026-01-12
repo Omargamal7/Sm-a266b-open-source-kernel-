@@ -6,6 +6,10 @@ on:
       - your-branch-name
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,19 +20,24 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison flex libssl-dev build-essential \
-                              libelf-dev dwarves rsync python3
+          sudo apt install -y \
+            bc bison flex libssl-dev build-essential \
+            libelf-dev dwarves rsync python3 \
+            clang llvm lld device-tree-compiler \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            cpio gzip xz-utils unzip zip
 
       - name: Build kernel
+        working-directory: kernel/opensource
         run: |
-          chmod +x build_kernel.sh
-          ./build_kernel.sh
+          chmod +x build_kernel_gha.sh
+          ./build_kernel_gha.sh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: a26-kernel
           path: |
-            Image
-            arch/arm64/boot/dts
-            arch/arm64/boot/Image*
+            kernel/opensource/Image
+            kernel/opensource/arch/arm64/boot/dts
+            kernel/opensource/arch/arm64/boot/Image*

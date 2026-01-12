@@ -1,9 +1,9 @@
-name: Build Samsung Galaxy A26 Kernel (KernelSU)
+name: Build Galaxy A26 Kernel (kernelsu)
 
 on:
   push:
     branches:
-      - Wildksu
+      - kernelsu
   workflow_dispatch:
 
 permissions:
@@ -12,7 +12,12 @@ permissions:
 
 jobs:
   build:
+    name: Build Kernel with KernelSU and init_boot.img
     runs-on: ubuntu-22.04
+    env:
+      KERNEL_DIR: kernel/opensource
+      ARCH_PATH: arch/arm64
+      DEFCONFIG_TARGET: s5e8835-a26xxx_defconfig
 
     steps:
       - name: Checkout repository
@@ -39,21 +44,21 @@ jobs:
           echo "magiskboot for x86_64 downloaded successfully"
 
       - name: Apply KernelSU patches
-        working-directory: kernel/opensource
         run: |
+          cd ${{ env.KERNEL_DIR }}
           if [ -f ../../wildksu/10_enable_susfs_for_ksu.patch ]; then
             echo "Applying KernelSU SUSFS patch..."
             patch -p1 < ../../wildksu/10_enable_susfs_for_ksu.patch || echo "Patch may already be applied or failed"
           fi
 
       - name: Build kernel
-        working-directory: kernel/opensource
+        working-directory: ${{ env.KERNEL_DIR }}
         run: |
           chmod +x build_kernel_gha.sh
           ./build_kernel_gha.sh
 
       - name: Unpack init_boot.img
-        working-directory: kernel/opensource
+        working-directory: ${{ env.KERNEL_DIR }}
         run: |
           if [ -f init_boot.img ]; then
             echo "Unpacking init_boot.img..."
@@ -66,18 +71,18 @@ jobs:
           fi
 
       - name: Repack init_boot.img with new kernel
-        working-directory: kernel/opensource
+        working-directory: ${{ env.KERNEL_DIR }}
         run: |
           if [ -d init_boot_repack ]; then
             echo "Repacking init_boot.img with patched kernel..."
             cd init_boot_repack
             
             # Replace kernel image
-            if [ -f ../arch/arm64/boot/Image.gz ]; then
-              cp ../arch/arm64/boot/Image.gz ./kernel
+            if [ -f ../${{ env.ARCH_PATH }}/boot/Image.gz ]; then
+              cp ../${{ env.ARCH_PATH }}/boot/Image.gz ./kernel
               echo "Using compressed kernel Image.gz"
-            elif [ -f ../arch/arm64/boot/Image ]; then
-              cp ../arch/arm64/boot/Image ./kernel
+            elif [ -f ../${{ env.ARCH_PATH }}/boot/Image ]; then
+              cp ../${{ env.ARCH_PATH }}/boot/Image ./kernel
               echo "Using uncompressed kernel Image"
             elif [ -f ../Image ]; then
               cp ../Image ./kernel
@@ -96,15 +101,15 @@ jobs:
       - name: Upload kernel artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kernelsu-a26-build
+          name: kernel-image
           path: |
-            kernel/opensource/Image
-            kernel/opensource/arch/arm64/boot/dts/**/*.dtb
-            kernel/opensource/arch/arm64/boot/Image*
+            ${{ env.KERNEL_DIR }}/Image
+            ${{ env.KERNEL_DIR }}/${{ env.ARCH_PATH }}/boot/*.dtb
+            ${{ env.KERNEL_DIR }}/${{ env.ARCH_PATH }}/boot/Image*
 
       - name: Upload patched init_boot.img
         if: hashFiles('kernel/opensource/init_boot_patched.img') != ''
         uses: actions/upload-artifact@v4
         with:
           name: init_boot_patched
-          path: kernel/opensource/init_boot_patched.img
+          path: ${{ env.KERNEL_DIR }}/init_boot_patched.img

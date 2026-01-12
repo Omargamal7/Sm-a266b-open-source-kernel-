@@ -1,136 +1,43 @@
-# Kernel Build Outputs
+# Build outputs
 *.o
 *.ko
+*.cmd
 *.mod
 *.mod.c
-*.cmd
-*.symvers
-.tmp_versions/
-modules.order
-Module.symvers
-*.order
-
-# Compiled Object files
-*.slo
-*.lo
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Compiled Static libraries
-*.lai
-*.la
 *.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-
-# Kernel specific
-*.ko.unsigned
-*.ko.cmd
-.*.d
-.*.tmp
+*.so
+*.symvers
+*.order
+.tmp_versions/
 modules.builtin
-built-in.a
+Module.symvers
 
-# IDE and Editor files
-.vscode/
-.idea/
+# Kernel build artifacts
+kernel/opensource/vmlinux
+kernel/opensource/.config
+kernel/opensource/.config.old
+kernel/opensource/System.map
+kernel/opensource/.version
+kernel/opensource/arch/*/boot/Image
+kernel/opensource/arch/*/boot/Image.gz
+kernel/opensource/arch/*/boot/dts/**/*.dtb
+kernel/opensource/arch/*/boot/dts/**/*.dtbo
+
+# Boot image repack temporary files
+kernel/opensource/init_boot_repack/
+kernel/opensource/init_boot_patched.img
+kernel/opensource/tools/magiskboot_x64
+
+# GitHub Actions artifacts
+output/
+
+# Temporary files
 *.swp
 *.swo
 *~
-.*.sw?
-*.sublime-*
-
-# OS generated files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
 
-# Temporary files
-*.tmp
-*.temp
-*.bak
-*.log
-*.cache
-
-# Build directories
-build/
-dist/
-out/
-*.build/
-
-# Archives
-*.zip
-*.tar.gz
-*.tgz
-*.rar
-*.7z
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.Python
-env/
-venv/
-ENV/
-.venv
-
-# Documentation build outputs
-docs/_build/
-site/
-
-# Testing
-.coverage
-htmlcov/
-.pytest_cache/
-.tox/
-
-# Secrets and credentials (IMPORTANT!)
-*.key
-*.pem
-*.p12
-*.env
-.env.local
-secrets.yml
-credentials.json
-
-# Package managers
-node_modules/
-package-lock.json
-yarn.lock
-.npm
-
-# Android build outputs (if applicable)
-*.apk
-*.ap_
-*.dex
-local.properties
-
-# Recovery/TWRP build artifacts
-recovery.img
-boot.img
-init_boot.img
-vendor_boot.img
-*.img
-
-# Magisk build outputs
-magisk.zip
-
-# Git merge files
-*.orig
+# IDE files
+.vscode/
+.idea/
+*.iml

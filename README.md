@@ -7,8 +7,19 @@ This repository provides automated workflows for importing, organizing, and mana
 ## Quick Start
 
 1. Navigate to the **Actions** tab
-2. Run one of the import workflows to download kernel files
-3. Files will be automatically organized into appropriate directories
+2. Choose a workflow:
+   - **Import workflows** - Download and organize kernel files from Google Drive
+   - **Build workflows** - Compile the kernel with KernelSU and create init_boot.img
+3. Run the workflow and download the artifacts
+
+## Build Features
+
+The automated build workflows provide:
+- ✅ Complete kernel compilation with KernelSU/SUSFS patches
+- ✅ Automatic toolchain setup (no AOSP environment required)
+- ✅ init_boot.img repacking with patched kernel
+- ✅ AnyKernel3 flashable ZIP creation
+- ✅ Ready-to-flash kernel images
 
 ## Documentation
 
@@ -34,6 +45,10 @@ This repository provides automated workflows for importing, organizing, and mana
 ## Contributing
 
 Contributions are welcome! Please read [HELP.md](HELP.md) for more information.
+
+## Custom automation
+
+This repository does not include a general-purpose “custom agent” that can fix issues automatically. If you need new automation, please open an issue with specific requirements so it can be designed appropriately.
 
 ## License
 

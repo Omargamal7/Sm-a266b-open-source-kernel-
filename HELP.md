@@ -78,19 +78,75 @@ Similar to the first workflow but uses full Google Drive URLs instead of just fi
 
 ### Building the Kernel
 
-After importing the kernel source files:
+The kernel can be built in two ways:
 
-1. **Navigate to the kernel directory:**
+#### Option 1: Using GitHub Actions Workflows (Recommended)
+
+The repository includes automated GitHub Actions workflows that build the kernel with KernelSU patches and repack it into init_boot.img:
+
+1. **Go to the Actions tab** in the GitHub repository
+2. **Select the appropriate workflow:**
+   - `Build Galaxy A26 Kernel (kernelsu)` - for the kernelsu branch
+   - `Build Samsung Galaxy A26 Kernel (KernelSU)` - for the Wildksu branch
+   - `Build WildKSU Kernel (SM-A266B)` - for the wildksu branch
+3. **Click "Run workflow"** and select the branch
+4. **Wait for the build to complete** (typically 20-30 minutes)
+5. **Download artifacts:**
+   - `kernel-image` - compiled kernel Image and dtb files
+   - `init_boot_patched` - patched init_boot.img with KernelSU kernel
+   - `WildKSU-A26-AnyKernel` - flashable AnyKernel3 ZIP (wildksu branch only)
+
+The workflows automatically:
+- Install all required build dependencies
+- Download the correct toolchains (clang, gcc cross-compilers)
+- Apply KernelSU/SUSFS patches
+- Build the kernel
+- Unpack init_boot.img
+- Replace the kernel in init_boot.img with the patched version
+- Repack init_boot.img as `init_boot_patched.img`
+
+#### Option 2: Local Build in AOSP Environment
+
+After importing the kernel source files, you can build locally inside an Android (AOSP) build tree:
+
+1. **Start from the Android build tree root (AOSP):**
    ```bash
-   cd kernel/opensource
+   cd /path/to/aosp
    ```
 
-2. **Follow standard kernel building procedures:**
-   - Set up your build environment (toolchain, dependencies)
-   - Configure the kernel for SM-A266B
-   - Build using the appropriate kernel build commands
+2. **Ensure the AOSP prebuilts are present:**
+   - `prebuilts/clang/host/linux-x86/clang-r450784d/bin`
+   - `build/kernel/build-tools/path/linux-x86` (provides `dtc`)
+   - `prebuilts/kernel-build-tools/linux-x86`
 
-   *Note: Specific build instructions will depend on the kernel source structure.*
+   The kernel build expects `dtc` to resolve from:
+   `build/kernel/build-tools/path/linux-x86/dtc`
+
+3. **Run the build script from the kernel directory:**
+   ```bash
+   cd kernel/opensource
+   ./build_kernel.sh
+   ```
+
+#### Option 3: Local Build with GitHub Actions Script
+
+You can also use the GitHub Actions compatible build script locally:
+
+1. **Install dependencies:**
+   ```bash
+   sudo apt install -y \
+     bc bison flex build-essential libc6-dev libncurses-dev \
+     libssl-dev libelf-dev dwarves rsync python3 \
+     clang llvm lld device-tree-compiler \
+     gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+   ```
+
+2. **Build the kernel:**
+   ```bash
+   cd kernel/opensource
+   export GITHUB_WORKSPACE=/path/to/repo
+   ./build_kernel_gha.sh
+   ```
 
 ### Working with TWRP
 

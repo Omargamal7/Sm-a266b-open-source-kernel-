@@ -1,9 +1,10 @@
-name: Build Samsung Galaxy A26 Kernel (KernelSU)
+name: Build WildKSU Kernel (SM-A266B)
 
 on:
   push:
-    branches:
-      - Wildksu
+    branches: [ wildksu ]
+  pull_request:
+    branches: [ wildksu ]
   workflow_dispatch:
 
 permissions:
@@ -15,18 +16,21 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Install build dependencies
         run: |
           sudo apt update
           sudo apt install -y \
-            bc bison flex build-essential libc6-dev libncurses-dev \
-            libssl-dev libelf-dev dwarves rsync python3 \
+            bc bison flex \
+            libssl-dev libelf-dev \
+            build-essential \
+            kmod dwarves \
+            rsync zip unzip \
             clang llvm lld device-tree-compiler \
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
-            cpio gzip xz-utils unzip zip
+            cpio gzip xz-utils
 
       - name: Download x86_64 magiskboot for boot image repacking
         run: |
@@ -38,13 +42,24 @@ jobs:
           rm -rf magisk.zip magisk_extract
           echo "magiskboot for x86_64 downloaded successfully"
 
-      - name: Apply KernelSU patches
+      - name: Apply WildKSU / SUSFS patches
         working-directory: kernel/opensource
         run: |
+          set -e
           if [ -f ../../wildksu/10_enable_susfs_for_ksu.patch ]; then
             echo "Applying KernelSU SUSFS patch..."
             patch -p1 < ../../wildksu/10_enable_susfs_for_ksu.patch || echo "Patch may already be applied or failed"
           fi
+          
+          # Apply any other patches from wildksu directory
+          shopt -s nullglob
+          for p in ../../wildksu/**/*.patch; do
+            if [ -f "$p" ] && [ "$p" != "../../wildksu/10_enable_susfs_for_ksu.patch" ]; then
+              echo "Applying patch: $p"
+              patch -p1 < "$p" || true
+            fi
+          done
+          shopt -u nullglob
 
       - name: Build kernel
         working-directory: kernel/opensource
@@ -62,10 +77,10 @@ jobs:
             ../tools/magiskboot_x64 unpack ../init_boot.img
             ls -la
           else
-            echo "Warning: init_boot.img not found, skipping repack"
+            echo "Warning: init_boot.img not found"
           fi
 
-      - name: Repack init_boot.img with new kernel
+      - name: Repack init_boot.img with patched kernel
         working-directory: kernel/opensource
         run: |
           if [ -d init_boot_repack ]; then
@@ -89,18 +104,31 @@ jobs:
             mv new-boot.img ../init_boot_patched.img
             echo "Repacked init_boot.img successfully!"
             ls -lh ../init_boot_patched.img
-          else
-            echo "Warning: init_boot_repack directory not found, skipping repack"
           fi
 
-      - name: Upload kernel artifacts
+      - name: Package AnyKernel3
+        run: |
+          OUT="$GITHUB_WORKSPACE/output"
+          mkdir -p "$OUT"
+
+          cp kernel/opensource/anykernel.sh "$OUT/"
+          cp -r kernel/opensource/tools "$OUT/"
+          cp -r kernel/opensource/META-INF "$OUT/"
+
+          if [ -f kernel/opensource/arch/arm64/boot/Image.gz ]; then
+            cp kernel/opensource/arch/arm64/boot/Image.gz "$OUT/kernel"
+          else
+            cp kernel/opensource/arch/arm64/boot/Image "$OUT/kernel"
+          fi
+
+          cd "$OUT"
+          zip -r9 WildKSU-A26-AnyKernel.zip .
+
+      - name: Upload kernel image
         uses: actions/upload-artifact@v4
         with:
-          name: kernelsu-a26-build
-          path: |
-            kernel/opensource/Image
-            kernel/opensource/arch/arm64/boot/dts/**/*.dtb
-            kernel/opensource/arch/arm64/boot/Image*
+          name: kernel-image
+          path: kernel/opensource/arch/arm64/boot/Image*
 
       - name: Upload patched init_boot.img
         if: hashFiles('kernel/opensource/init_boot_patched.img') != ''
@@ -108,3 +136,9 @@ jobs:
         with:
           name: init_boot_patched
           path: kernel/opensource/init_boot_patched.img
+
+      - name: Upload flashable zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: WildKSU-A26-AnyKernel
+          path: output/WildKSU-A26-AnyKernel.zip
