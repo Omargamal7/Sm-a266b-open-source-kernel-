@@ -24,6 +24,16 @@ jobs:
             gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
             cpio gzip xz-utils unzip zip
 
+      - name: Download x86_64 magiskboot for boot image repacking
+        run: |
+          echo "Downloading magiskboot for x86_64..."
+          wget -q https://github.com/topjohnwu/Magisk/releases/download/v27.0/Magisk-v27.0.apk -O magisk.zip
+          unzip -q magisk.zip lib/x86_64/libmagiskboot.so -d magisk_extract
+          mv magisk_extract/lib/x86_64/libmagiskboot.so kernel/opensource/tools/magiskboot_x64
+          chmod +x kernel/opensource/tools/magiskboot_x64
+          rm -rf magisk.zip magisk_extract
+          echo "magiskboot for x86_64 downloaded successfully"
+
       - name: Apply KernelSU patches
         working-directory: kernel/opensource
         run: |
@@ -45,7 +55,7 @@ jobs:
             echo "Unpacking init_boot.img..."
             mkdir -p init_boot_repack
             cd init_boot_repack
-            ../tools/magiskboot unpack ../init_boot.img
+            ../tools/magiskboot_x64 unpack ../init_boot.img
             ls -la
           else
             echo "Warning: init_boot.img not found, skipping repack"
@@ -71,7 +81,7 @@ jobs:
             fi
             
             # Repack the image
-            ../tools/magiskboot repack ../init_boot.img
+            ../tools/magiskboot_x64 repack ../init_boot.img
             mv new-boot.img ../init_boot_patched.img
             echo "Repacked init_boot.img successfully!"
             ls -lh ../init_boot_patched.img
