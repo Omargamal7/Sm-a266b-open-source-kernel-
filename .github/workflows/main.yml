@@ -6,6 +6,10 @@ on:
       - kernelsu
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build:
     name: Build Kernel with KernelSU and init_boot.img
