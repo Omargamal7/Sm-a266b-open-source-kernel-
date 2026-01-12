@@ -27,43 +27,84 @@ jobs:
             libssl-dev libelf-dev \
             build-essential \
             kmod dwarves \
-            rsync zip unzip
+            rsync zip unzip \
+            clang llvm lld device-tree-compiler \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            cpio gzip xz-utils
 
-      - name: Setup kernel build environment
-        working-directory: kernel/opensource
+      - name: Download x86_64 magiskboot for boot image repacking
         run: |
-          TOOLCHAIN_DIR="$GITHUB_WORKSPACE/kernel/opensource/toolchain"
+          echo "Downloading magiskboot for x86_64..."
+          wget -q https://github.com/topjohnwu/Magisk/releases/download/v27.0/Magisk-v27.0.apk -O magisk.zip
+          unzip -q magisk.zip lib/x86_64/libmagiskboot.so -d magisk_extract
+          mv magisk_extract/lib/x86_64/libmagiskboot.so kernel/opensource/tools/magiskboot_x64
+          chmod +x kernel/opensource/tools/magiskboot_x64
+          rm -rf magisk.zip magisk_extract
+          echo "magiskboot for x86_64 downloaded successfully"
 
-          echo "$TOOLCHAIN_DIR/clang/host/linux-x86/clang-r450784d/bin" >> $GITHUB_PATH
-          echo "$TOOLCHAIN_DIR/build/kernel/build-tools/path/linux-x86" >> $GITHUB_PATH
-
-          echo "ARCH=arm64" >> $GITHUB_ENV
-          echo "LLVM=1" >> $GITHUB_ENV
-          echo "PLATFORM_VERSION=13" >> $GITHUB_ENV
-          echo "ANDROID_MAJOR_VERSION=t" >> $GITHUB_ENV
-          echo "TARGET_SOC=s5e8835" >> $GITHUB_ENV
-          echo "DEPMOD=depmod" >> $GITHUB_ENV
-          echo 'DTC_FLAGS=-@' >> $GITHUB_ENV
-
-          echo "HOSTCFLAGS=--sysroot=$TOOLCHAIN_DIR/build/kernel/build-tools/sysroot -I$TOOLCHAIN_DIR/prebuilts/kernel-build-tools/linux-x86/include" >> $GITHUB_ENV
-          echo "HOSTLDFLAGS=--sysroot=$TOOLCHAIN_DIR/build/kernel/build-tools/sysroot -L$TOOLCHAIN_DIR/prebuilts/kernel-build-tools/linux-x86/lib64 -fuse-ld=lld" >> $GITHUB_ENV
-
-      - name: Apply WildKSU / SUSFS patches (if present)
+      - name: Apply WildKSU / SUSFS patches
         working-directory: kernel/opensource
         run: |
           set -e
-          for p in \
-            kernel_patches-main/**/**/*.patch \
-            wildksu/**/*.patch
-          do
-            [ -f "$p" ] && patch -p1 < "$p" || true
+          if [ -f ../../wildksu/10_enable_susfs_for_ksu.patch ]; then
+            echo "Applying KernelSU SUSFS patch..."
+            patch -p1 < ../../wildksu/10_enable_susfs_for_ksu.patch || echo "Patch may already be applied or failed"
+          fi
+          
+          # Apply any other patches from wildksu directory
+          shopt -s nullglob
+          for p in ../../wildksu/**/*.patch; do
+            if [ -f "$p" ] && [ "$p" != "../../wildksu/10_enable_susfs_for_ksu.patch" ]; then
+              echo "Applying patch: $p"
+              patch -p1 < "$p" || true
+            fi
           done
+          shopt -u nullglob
 
       - name: Build kernel
         working-directory: kernel/opensource
         run: |
-          make s5e8835-a26xxx_defconfig
-          make -j$(nproc)
+          chmod +x build_kernel_gha.sh
+          ./build_kernel_gha.sh
+
+      - name: Unpack init_boot.img
+        working-directory: kernel/opensource
+        run: |
+          if [ -f init_boot.img ]; then
+            echo "Unpacking init_boot.img..."
+            mkdir -p init_boot_repack
+            cd init_boot_repack
+            ../tools/magiskboot_x64 unpack ../init_boot.img
+            ls -la
+          else
+            echo "Warning: init_boot.img not found"
+          fi
+
+      - name: Repack init_boot.img with patched kernel
+        working-directory: kernel/opensource
+        run: |
+          if [ -d init_boot_repack ]; then
+            echo "Repacking init_boot.img with patched kernel..."
+            cd init_boot_repack
+            
+            # Replace kernel image
+            if [ -f ../arch/arm64/boot/Image.gz ]; then
+              cp ../arch/arm64/boot/Image.gz ./kernel
+              echo "Using compressed kernel Image.gz"
+            elif [ -f ../arch/arm64/boot/Image ]; then
+              cp ../arch/arm64/boot/Image ./kernel
+              echo "Using uncompressed kernel Image"
+            elif [ -f ../Image ]; then
+              cp ../Image ./kernel
+              echo "Using kernel Image from root"
+            fi
+            
+            # Repack the image
+            ../tools/magiskboot_x64 repack ../init_boot.img
+            mv new-boot.img ../init_boot_patched.img
+            echo "Repacked init_boot.img successfully!"
+            ls -lh ../init_boot_patched.img
+          fi
 
       - name: Package AnyKernel3
         run: |
@@ -88,6 +129,13 @@ jobs:
         with:
           name: kernel-image
           path: kernel/opensource/arch/arm64/boot/Image*
+
+      - name: Upload patched init_boot.img
+        if: hashFiles('kernel/opensource/init_boot_patched.img') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: init_boot_patched
+          path: kernel/opensource/init_boot_patched.img
 
       - name: Upload flashable zip
         uses: actions/upload-artifact@v4

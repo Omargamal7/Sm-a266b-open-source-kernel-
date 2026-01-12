@@ -6,9 +6,13 @@ on:
       - kernelsu
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build:
-    name: Build Kernel
+    name: Build Kernel with KernelSU and init_boot.img
     runs-on: ubuntu-22.04
     env:
       KERNEL_DIR: kernel/opensource
@@ -22,33 +26,77 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison flex build-essential libc6-dev libncurses-dev libssl-dev libelf-dev dwarves rsync python3
+          sudo apt install -y \
+            bc bison flex build-essential libc6-dev libncurses-dev \
+            libssl-dev libelf-dev dwarves rsync python3 \
+            clang llvm lld device-tree-compiler \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi \
+            cpio gzip xz-utils unzip zip
 
-      - name: Ensure kernel config exists
+      - name: Download x86_64 magiskboot for boot image repacking
         run: |
-          if [ ! -d "$KERNEL_DIR" ]; then
-            echo "Kernel directory not found at $(pwd)/$KERNEL_DIR"
-            exit 1
-          fi
-          cd "$KERNEL_DIR"
-          if [ ! -d "$ARCH_PATH" ]; then
-            echo "Architecture path not found at $(pwd)/$ARCH_PATH"
-            exit 1
-          fi
-          DEFCONFIG_PATH="$ARCH_PATH/configs/$DEFCONFIG_TARGET"
-          if [ ! -f "$DEFCONFIG_PATH" ]; then
-            echo "Defconfig file not found at $(pwd)/$DEFCONFIG_PATH"
-            echo "Ensure that $DEFCONFIG_TARGET exists in $ARCH_PATH/configs before running build_kernel.sh"
-            exit 1
-          fi
+          echo "Downloading magiskboot for x86_64..."
+          wget -q https://github.com/topjohnwu/Magisk/releases/download/v27.0/Magisk-v27.0.apk -O magisk.zip
+          unzip -q magisk.zip lib/x86_64/libmagiskboot.so -d magisk_extract
+          mv magisk_extract/lib/x86_64/libmagiskboot.so kernel/opensource/tools/magiskboot_x64
+          chmod +x kernel/opensource/tools/magiskboot_x64
+          rm -rf magisk.zip magisk_extract
+          echo "magiskboot for x86_64 downloaded successfully"
 
-      - name: Make build script executable
-        working-directory: ${{ env.KERNEL_DIR }}
-        run: chmod +x build_kernel.sh
+      - name: Apply KernelSU patches
+        run: |
+          cd ${{ env.KERNEL_DIR }}
+          if [ -f ../../wildksu/10_enable_susfs_for_ksu.patch ]; then
+            echo "Applying KernelSU SUSFS patch..."
+            patch -p1 < ../../wildksu/10_enable_susfs_for_ksu.patch || echo "Patch may already be applied or failed"
+          fi
 
       - name: Build kernel
         working-directory: ${{ env.KERNEL_DIR }}
-        run: ./build_kernel.sh
+        run: |
+          chmod +x build_kernel_gha.sh
+          ./build_kernel_gha.sh
+
+      - name: Unpack init_boot.img
+        working-directory: ${{ env.KERNEL_DIR }}
+        run: |
+          if [ -f init_boot.img ]; then
+            echo "Unpacking init_boot.img..."
+            mkdir -p init_boot_repack
+            cd init_boot_repack
+            ../tools/magiskboot_x64 unpack ../init_boot.img
+            ls -la
+          else
+            echo "Warning: init_boot.img not found, skipping repack"
+          fi
+
+      - name: Repack init_boot.img with new kernel
+        working-directory: ${{ env.KERNEL_DIR }}
+        run: |
+          if [ -d init_boot_repack ]; then
+            echo "Repacking init_boot.img with patched kernel..."
+            cd init_boot_repack
+            
+            # Replace kernel image
+            if [ -f ../${{ env.ARCH_PATH }}/boot/Image.gz ]; then
+              cp ../${{ env.ARCH_PATH }}/boot/Image.gz ./kernel
+              echo "Using compressed kernel Image.gz"
+            elif [ -f ../${{ env.ARCH_PATH }}/boot/Image ]; then
+              cp ../${{ env.ARCH_PATH }}/boot/Image ./kernel
+              echo "Using uncompressed kernel Image"
+            elif [ -f ../Image ]; then
+              cp ../Image ./kernel
+              echo "Using kernel Image from root"
+            fi
+            
+            # Repack the image
+            ../tools/magiskboot_x64 repack ../init_boot.img
+            mv new-boot.img ../init_boot_patched.img
+            echo "Repacked init_boot.img successfully!"
+            ls -lh ../init_boot_patched.img
+          else
+            echo "Warning: init_boot_repack directory not found, skipping repack"
+          fi
 
       - name: Upload kernel artifacts
         uses: actions/upload-artifact@v4
@@ -58,3 +106,10 @@ jobs:
             ${{ env.KERNEL_DIR }}/Image
             ${{ env.KERNEL_DIR }}/${{ env.ARCH_PATH }}/boot/*.dtb
             ${{ env.KERNEL_DIR }}/${{ env.ARCH_PATH }}/boot/Image*
+
+      - name: Upload patched init_boot.img
+        if: hashFiles('kernel/opensource/init_boot_patched.img') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: init_boot_patched
+          path: ${{ env.KERNEL_DIR }}/init_boot_patched.img

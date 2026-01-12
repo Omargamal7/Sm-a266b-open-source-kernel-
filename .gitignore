@@ -1,0 +1,43 @@
+# Build outputs
+*.o
+*.ko
+*.cmd
+*.mod
+*.mod.c
+*.a
+*.so
+*.symvers
+*.order
+.tmp_versions/
+modules.builtin
+Module.symvers
+
+# Kernel build artifacts
+kernel/opensource/vmlinux
+kernel/opensource/.config
+kernel/opensource/.config.old
+kernel/opensource/System.map
+kernel/opensource/.version
+kernel/opensource/arch/*/boot/Image
+kernel/opensource/arch/*/boot/Image.gz
+kernel/opensource/arch/*/boot/dts/**/*.dtb
+kernel/opensource/arch/*/boot/dts/**/*.dtbo
+
+# Boot image repack temporary files
+kernel/opensource/init_boot_repack/
+kernel/opensource/init_boot_patched.img
+kernel/opensource/tools/magiskboot_x64
+
+# GitHub Actions artifacts
+output/
+
+# Temporary files
+*.swp
+*.swo
+*~
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+*.iml
