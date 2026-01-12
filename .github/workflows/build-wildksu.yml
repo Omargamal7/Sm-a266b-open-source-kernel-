@@ -52,12 +52,14 @@ jobs:
           fi
           
           # Apply any other patches from wildksu directory
+          shopt -s nullglob
           for p in ../../wildksu/**/*.patch; do
             if [ -f "$p" ] && [ "$p" != "../../wildksu/10_enable_susfs_for_ksu.patch" ]; then
               echo "Applying patch: $p"
               patch -p1 < "$p" || true
             fi
           done
+          shopt -u nullglob
 
       - name: Build kernel
         working-directory: kernel/opensource

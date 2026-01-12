@@ -109,9 +109,16 @@ fi
 
 # Configure and build the kernel
 echo "Configuring kernel with s5e8835-a26xxx_defconfig..."
-make s5e8835-a26xxx_defconfig
+if ! make s5e8835-a26xxx_defconfig; then
+  echo "Error: Failed to configure kernel with defconfig" >&2
+  exit 1
+fi
 
 echo "Building kernel..."
-make -j$(nproc)
+if ! make -j$(nproc); then
+  echo "Error: Kernel build failed" >&2
+  echo "Please check the build logs above for specific errors" >&2
+  exit 1
+fi
 
 echo "Kernel build completed successfully!"
