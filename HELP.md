@@ -24,9 +24,9 @@ After the import workflows run, the repository will contain:
 ## Available Workflows
 
 ### 1. Import Drive Files (IDs)
-**File:** `.github/workflows/import-drive-links.yml`
+**Files:** `.github/workflows/import-drive-links.yml` and `.github/workflows/import-drive-files.yml`
 
-This workflow downloads kernel files from Google Drive using file IDs, sorts them into appropriate directories, and extracts archives.
+These workflows download kernel files from Google Drive using file IDs, sort them into appropriate directories, and extract archives.
 
 **How to run:**
 1. Go to the "Actions" tab in GitHub
@@ -35,7 +35,7 @@ This workflow downloads kernel files from Google Drive using file IDs, sorts the
 4. Select the branch and click "Run workflow"
 
 **What it does:**
-- Downloads files from predefined Google Drive IDs
+- Downloads files from predefined Google Drive file IDs
 - Sorts files into directories based on filename patterns:
   - Files with "platform" → `kernel/platform/`
   - Files with "twrp" or "recovery" → `twrp/`
@@ -61,6 +61,7 @@ Similar to the first workflow but uses full Google Drive URLs instead of just fi
 - More detailed logging
 - Better error handling with `set -euo pipefail`
 - Creates an import map file (`IMPORT_MAP.txt`) showing where each file was sorted
+- Uses full Google Drive URLs for better reliability
 
 ## Common Tasks
 
@@ -85,25 +86,27 @@ The kernel can be built in two ways:
 The repository includes automated GitHub Actions workflows that build the kernel with KernelSU patches and repack it into init_boot.img:
 
 1. **Go to the Actions tab** in the GitHub repository
-2. **Select the appropriate workflow:**
-   - `Build Galaxy A26 Kernel (kernelsu)` - for the kernelsu branch
-   - `Build Samsung Galaxy A26 Kernel (KernelSU)` - for the Wildksu branch
-   - `Build WildKSU Kernel (SM-A266B)` - for the wildksu branch
-3. **Click "Run workflow"** and select the branch
+2. **Select the appropriate workflow based on your branch:**
+   - `Build Galaxy A26 Kernel (kernelsu)` - Builds from the `kernelsu` branch
+   - `Build Samsung Galaxy A26 Kernel (KernelSU)` - Builds from the `Wildksu` branch  
+   - `Build WildKSU Kernel (SM-A266B)` - Builds from the `wildksu` branch
+   - `Build Galaxy A26 Kernel` - Manual trigger, general purpose build
+3. **Click "Run workflow"** and select the appropriate branch
 4. **Wait for the build to complete** (typically 20-30 minutes)
 5. **Download artifacts:**
-   - `kernel-image` - compiled kernel Image and dtb files
+   - `kernel-image` or `kernelsu-a26-build` - compiled kernel Image and dtb files
    - `init_boot_patched` - patched init_boot.img with KernelSU kernel
-   - `WildKSU-A26-AnyKernel` - flashable AnyKernel3 ZIP (wildksu branch only)
+   - `WildKSU-A26-AnyKernel` - flashable AnyKernel3 ZIP (wildksu workflow only)
 
 The workflows automatically:
 - Install all required build dependencies
 - Download the correct toolchains (clang, gcc cross-compilers)
-- Apply KernelSU/SUSFS patches
+- Apply KernelSU/SUSFS patches (for KernelSU and WildKSU workflows)
 - Build the kernel
 - Unpack init_boot.img
 - Replace the kernel in init_boot.img with the patched version
 - Repack init_boot.img as `init_boot_patched.img`
+- Package AnyKernel3 flashable ZIP (wildksu workflow only)
 
 #### Option 2: Local Build in AOSP Environment
 
