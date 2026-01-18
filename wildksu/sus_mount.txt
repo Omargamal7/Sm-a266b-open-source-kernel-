@@ -1,7 +1,0 @@
-# this contains suspicious mounts you want 
-# to be sus_mounted at post-mount.sh
-# example
-# /system
-# /system_ext
-# /data/adb/modules
-# /debug_ramdisk
